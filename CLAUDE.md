@@ -14,6 +14,8 @@ pnpm test:native            # native tests (jest)
 pnpm --filter server test -- workout-schema
 pnpm --filter native test -- MyComponent
 
+pnpm test:coverage            # server coverage report + thresholds
+
 pnpm check                  # oxlint + oxfmt --write
 pnpm check:ci               # oxlint + oxfmt --check (no write)
 pnpm check-types            # tsc across all packages
@@ -46,7 +48,23 @@ pnpm workspace monorepo: `apps/*`, `packages/*`.
 
 - **Server:** Vitest with `@cloudflare/vitest-pool-workers` (tests run in Miniflare). Config: `apps/server/vitest.config.ts`.
 - **Native:** Jest with `jest-expo` preset. Config: `apps/native/jest.config.js`.
-- Test files live next to source (colocated).
+- Test files live next to source (colocated) in `__tests__/` directories.
+
+### Test types
+
+- **Unit tests** — pure logic: Zod validators, utils, transforms. No DB or network.
+- **Integration tests** — DB-backed: tRPC endpoints, Drizzle queries. Run in Miniflare.
+- Both types required for server features. Unit test validators/pure functions; integration test DB operations and tRPC endpoints.
+
+### TDD flow
+
+Write failing test first → implement → refactor. Use `/tdd` skill.
+
+### Coverage
+
+- `pnpm test:coverage` — generates report, enforces thresholds.
+- Thresholds: lines 70%, functions 60%, branches 60%, statements 70%.
+- Coverage must pass before merging.
 
 ## Workflow
 

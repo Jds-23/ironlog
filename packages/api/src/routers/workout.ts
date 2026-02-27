@@ -6,7 +6,7 @@ import { exercises, setTemplates, workouts } from "@ironlog/db/schema";
 
 import { publicProcedure, router } from "../index";
 
-const exerciseInput = z.object({
+export const exerciseInput = z.object({
   name: z.string().min(1),
   sets: z.array(
     z.object({
@@ -16,7 +16,7 @@ const exerciseInput = z.object({
   ),
 });
 
-const createUpdateInput = z.object({
+export const createUpdateInput = z.object({
   title: z.string().trim().min(1),
   exercises: z.array(exerciseInput),
 });

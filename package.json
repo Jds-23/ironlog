@@ -22,7 +22,8 @@
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
     "test:server": "pnpm --filter server test",
-    "test:native": "pnpm --filter native test"
+    "test:native": "pnpm --filter native test",
+    "test:coverage": "pnpm --filter server test:coverage"
   },
   "dependencies": {
     "@ironlog/env": "workspace:*",

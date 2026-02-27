@@ -103,9 +103,7 @@
       "indexes": {
         "account_userId_idx": {
           "name": "account_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -114,12 +112,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -192,16 +186,12 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "session_userId_idx": {
           "name": "session_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -210,12 +200,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -283,9 +269,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -345,9 +329,7 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": [
-            "identifier"
-          ],
+          "columns": ["identifier"],
           "isUnique": false
         }
       },
@@ -391,9 +373,7 @@
       "indexes": {
         "exercises_workout_id_idx": {
           "name": "exercises_workout_id_idx",
-          "columns": [
-            "workout_id"
-          ],
+          "columns": ["workout_id"],
           "isUnique": false
         }
       },
@@ -402,12 +382,8 @@
           "name": "exercises_workout_id_workouts_id_fk",
           "tableFrom": "exercises",
           "tableTo": "workouts",
-          "columnsFrom": [
-            "workout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workout_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -458,9 +434,7 @@
       "indexes": {
         "set_templates_exercise_id_idx": {
           "name": "set_templates_exercise_id_idx",
-          "columns": [
-            "exercise_id"
-          ],
+          "columns": ["exercise_id"],
           "isUnique": false
         }
       },
@@ -469,12 +443,8 @@
           "name": "set_templates_exercise_id_exercises_id_fk",
           "tableFrom": "set_templates",
           "tableTo": "exercises",
-          "columnsFrom": [
-            "exercise_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["exercise_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -557,9 +527,7 @@
       "indexes": {
         "logged_exercises_session_id_idx": {
           "name": "logged_exercises_session_id_idx",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         }
       },
@@ -568,12 +536,8 @@
           "name": "logged_exercises_session_id_sessions_id_fk",
           "tableFrom": "logged_exercises",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -639,9 +603,7 @@
       "indexes": {
         "logged_sets_logged_exercise_id_idx": {
           "name": "logged_sets_logged_exercise_id_idx",
-          "columns": [
-            "logged_exercise_id"
-          ],
+          "columns": ["logged_exercise_id"],
           "isUnique": false
         }
       },
@@ -650,12 +612,8 @@
           "name": "logged_sets_logged_exercise_id_logged_exercises_id_fk",
           "tableFrom": "logged_sets",
           "tableTo": "logged_exercises",
-          "columnsFrom": [
-            "logged_exercise_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["logged_exercise_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -713,9 +671,7 @@
       "indexes": {
         "sessions_workout_id_idx": {
           "name": "sessions_workout_id_idx",
-          "columns": [
-            "workout_id"
-          ],
+          "columns": ["workout_id"],
           "isUnique": false
         }
       },
@@ -724,12 +680,8 @@
           "name": "sessions_workout_id_workouts_id_fk",
           "tableFrom": "sessions",
           "tableTo": "workouts",
-          "columnsFrom": [
-            "workout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workout_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
