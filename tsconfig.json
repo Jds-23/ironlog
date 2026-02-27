@@ -1,0 +1,3 @@
+{
+  "extends": "@ironlog/config/tsconfig.base.json"
+}

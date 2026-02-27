@@ -1,0 +1,25 @@
+{
+  "name": "@ironlog/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@ironlog/db": "workspace:*",
+    "@ironlog/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@ironlog/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

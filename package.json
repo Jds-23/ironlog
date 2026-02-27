@@ -1,0 +1,36 @@
+{
+  "name": "ironlog",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "check-types": "pnpm -r check-types",
+    "dev:native": "pnpm --filter native dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:server": "pnpm --filter server dev",
+    "db:push": "pnpm --filter @ironlog/db db:push",
+    "db:generate": "pnpm --filter @ironlog/db db:generate",
+    "deploy": "pnpm --filter @ironlog/infra deploy",
+    "destroy": "pnpm --filter @ironlog/infra destroy",
+    "check": "oxlint && oxfmt --write"
+  },
+  "dependencies": {
+    "@ironlog/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@ironlog/config": "workspace:*",
+    "@types/node": "^22.13.14",
+    "oxfmt": "^0.26.0",
+    "oxlint": "^1.41.0",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.27.0"
+}
