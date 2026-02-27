@@ -16,6 +16,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppThemeProvider } from "@/contexts/app-theme-context";
+import { WorkoutProvider } from "@/contexts/workout-context";
 import { queryClient } from "@/utils/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -59,9 +60,11 @@ export default function Layout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
             <AppThemeProvider>
-              <HeroUINativeProvider>
-                <StackLayout />
-              </HeroUINativeProvider>
+              <WorkoutProvider>
+                <HeroUINativeProvider>
+                  <StackLayout />
+                </HeroUINativeProvider>
+              </WorkoutProvider>
             </AppThemeProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
