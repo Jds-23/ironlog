@@ -58,6 +58,7 @@
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.1.18",
     "uniwind": "^1.4.0",
+    "victory-native": "^41.20.2",
     "zod": "catalog:"
   },
   "devDependencies": {
