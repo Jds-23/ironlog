@@ -18,6 +18,7 @@
     "deploy": "pnpm --filter @ironlog/infra deploy",
     "destroy": "pnpm --filter @ironlog/infra destroy",
     "check": "oxlint && oxfmt --write",
+    "check:ci": "oxlint && oxfmt --check",
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
     "test:server": "pnpm --filter server test",
