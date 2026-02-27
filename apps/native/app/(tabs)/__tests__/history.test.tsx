@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
 import { WorkoutProvider, useWorkout } from "@/contexts/workout-context";
-import type { Exercise, Session } from "@/contexts/workout-context";
+import type { Session } from "@/contexts/workout-context";
 
 // Mock expo-router
 const mockRouter = { push: jest.fn(), back: jest.fn() };
