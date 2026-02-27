@@ -1,4 +1,5 @@
 import { publicProcedure, router } from "../index";
+import { workoutRouter } from "./workout";
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -9,5 +10,6 @@ export const appRouter = router({
       message: "This is private",
     };
   }),
+  workout: workoutRouter,
 });
 export type AppRouter = typeof appRouter;

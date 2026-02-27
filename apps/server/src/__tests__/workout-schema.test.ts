@@ -1,21 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { db } from "@ironlog/db";
 import { workouts, exercises, setTemplates } from "@ironlog/db/schema";
+import { createWorkoutTables } from "./helpers/setup-db";
 
 beforeAll(async () => {
-  await env.DB.exec(
-    "CREATE TABLE workouts (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, created_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL);",
-  );
-  await env.DB.exec(
-    'CREATE TABLE exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE, name TEXT NOT NULL, "order" INTEGER NOT NULL);',
-  );
-  await env.DB.exec("CREATE INDEX exercises_workout_id_idx ON exercises(workout_id);");
-  await env.DB.exec(
-    'CREATE TABLE set_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE, weight REAL, target_reps INTEGER, "order" INTEGER NOT NULL);',
-  );
-  await env.DB.exec("CREATE INDEX set_templates_exercise_id_idx ON set_templates(exercise_id);");
+  await createWorkoutTables();
 });
 
 describe("workout schema", () => {
