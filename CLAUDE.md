@@ -60,6 +60,13 @@ pnpm workspace monorepo: `apps/*`, `packages/*`.
 
 Write failing test first → implement → refactor. Use `/tdd` skill.
 
+**IMPORTANT — Server implementation plans must be phased TDD:**
+
+1. Split every plan into phases. Each phase = exactly one test case.
+2. Write one failing test → make it green → only then move to next phase.
+3. Never write multiple tests at once or implement ahead of a failing test.
+4. Final phase is always a refactor pass over all implementation, verified by all tests staying green.
+
 ### Coverage
 
 - `pnpm test:coverage` — generates report, enforces thresholds.
