@@ -1,17 +1,21 @@
 {
   "expo": {
     "scheme": "ironlog",
-    "userInterfaceStyle": "automatic",
-    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "orientation": "portrait",
+    "backgroundColor": "#0a0a0a",
     "web": {
       "bundler": "metro"
     },
-    "name": "ironlog",
+    "name": "IronLog",
     "slug": "ironlog",
-    "plugins": ["expo-font"],
+    "plugins": ["expo-font", "expo-router"],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "android": {
+      "permissions": ["VIBRATE"]
     }
   }
 }

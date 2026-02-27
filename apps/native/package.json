@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@better-auth/expo": "catalog:",
+    "@expo-google-fonts/bebas-neue": "^0.4.1",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo/metro-runtime": "~55.0.6",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5",
@@ -37,6 +39,7 @@
     "expo-network": "~55.0.8",
     "expo-router": "~55.0.2",
     "expo-secure-store": "~55.0.8",
+    "expo-splash-screen": "^55.0.10",
     "expo-status-bar": "~55.0.4",
     "expo-web-browser": "~55.0.9",
     "heroui-native": "^1.0.0-rc.3",
