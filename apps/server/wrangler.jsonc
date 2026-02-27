@@ -7,12 +7,12 @@
     {
       "binding": "DB",
       "database_name": "ironlog-test-db",
-      "database_id": "local-test"
-    }
+      "database_id": "local-test",
+    },
   ],
   "vars": {
     "CORS_ORIGIN": "http://localhost:8081",
     "BETTER_AUTH_SECRET": "test-secret",
-    "BETTER_AUTH_URL": "http://localhost:3000"
-  }
+    "BETTER_AUTH_URL": "http://localhost:3000",
+  },
 }

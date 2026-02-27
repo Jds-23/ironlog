@@ -27,10 +27,12 @@ pnpm db:push                # drizzle-kit push
 pnpm workspace monorepo: `apps/*`, `packages/*`.
 
 **Apps:**
+
 - `apps/server` — Hono on Cloudflare Workers. tRPC at `/trpc/*`, auth at `/api/auth/*`.
 - `apps/native` — Expo Router + HeroUI Native + TanStack Query.
 
 **Packages** (`@ironlog/*`):
+
 - `api` — tRPC router & context
 - `auth` — Better Auth config
 - `db` — Drizzle ORM + libSQL (Turso). Schema at `packages/db/src/schema/`.
