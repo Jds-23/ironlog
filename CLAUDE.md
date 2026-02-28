@@ -73,6 +73,40 @@ Write failing test first → implement → refactor. Use `/tdd` skill.
 - Thresholds: lines 70%, functions 60%, branches 60%, statements 70%.
 - Coverage must pass before merging.
 
+## Native UI Design System
+
+All native UI must use the app's custom design system. **Never use HeroUI Native components for visual styling** — use plain React Native components (`View`, `Text`, `Pressable`, `TextInput`, `ActivityIndicator`, `ScrollView`) styled with the constants from `apps/native/theme.ts`.
+
+### Colors (`@/theme`)
+
+- **Backgrounds:** `Colors.bg` (base), `Colors.surface1`–`surface4` (layered surfaces)
+- **Text:** `text1` (primary), `text2` (secondary), `text3` (tertiary), `text4` (placeholder/disabled)
+- **Accent:** `Colors.accent` (#e8ff47 yellow-green) — primary buttons, active tab indicators
+- **Semantic:** `Colors.orange` (actions), `Colors.green` (success), `Colors.red` (destructive/errors)
+- **Borders:** `Colors.border`, `Colors.border2`
+
+### Constants
+
+- `RADIUS_CARD: 12` — cards, buttons
+- `RADIUS_INPUT: 9` — input fields
+- `TAP_MIN: 44` — minimum touch target height
+
+### Typography
+
+- `BebasNeue_400Regular` — large display headings only
+- `DMSans_600SemiBold` — section headers, button text, page titles
+- `DMSans_500Medium` — labels
+- `DMSans_400Regular` — body text, input values
+
+### Patterns
+
+- **Cards:** `backgroundColor: Colors.surface1`, `borderRadius: RADIUS_CARD`, `padding: 14–16`
+- **Inputs:** `backgroundColor: Colors.surface2`, `borderRadius: RADIUS_INPUT`, `borderWidth: 1`, `borderColor: Colors.border`, `padding: 14`, `color: Colors.text1`, `placeholderTextColor: Colors.text4`
+- **Primary buttons:** `backgroundColor: Colors.accent`, `borderRadius: RADIUS_CARD`, `minHeight: TAP_MIN`, text `color: Colors.bg`
+- **Pressed/disabled state:** `opacity: 0.7`
+- **Screen layout:** `useSafeAreaInsets()` for padding, `Colors.bg` background
+- **Spacing:** `gap` property on parent View (6–16px), no margin hacks
+
 ## Workflow
 
 - Always use `pnpm` (never npm/yarn/bun for package management).

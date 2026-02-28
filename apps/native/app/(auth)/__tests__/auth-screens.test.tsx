@@ -37,29 +37,6 @@ jest.mock("@tanstack/react-form", () => ({
   }),
 }));
 
-// Mock heroui-native with minimal implementations
-jest.mock("heroui-native", () => {
-  const RN = require("react-native");
-  return {
-    Button: Object.assign(
-      ({ children, ...props }: any) => <RN.Pressable {...props}>{children}</RN.Pressable>,
-      { Label: ({ children }: any) => <RN.Text>{children}</RN.Text> },
-    ),
-    FieldError: ({ children }: any) => <RN.Text>{children}</RN.Text>,
-    Input: (props: any) => <RN.TextInput {...props} />,
-    Label: ({ children }: any) => <RN.Text>{children}</RN.Text>,
-    Spinner: () => null,
-    Surface: ({ children }: any) => <RN.View>{children}</RN.View>,
-    TextField: ({ children }: any) => <RN.View>{children}</RN.View>,
-    useToast: () => ({ toast: { show: jest.fn() } }),
-  };
-});
-
-// Mock safe area
-jest.mock("react-native-safe-area-context", () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
-
 import SignInScreen from "../sign-in";
 import SignUpScreen from "../sign-up";
 

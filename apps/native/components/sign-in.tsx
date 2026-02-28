@@ -1,19 +1,10 @@
 import { useForm } from "@tanstack/react-form";
-import {
-  Button,
-  FieldError,
-  Input,
-  Label,
-  Spinner,
-  Surface,
-  TextField,
-  useToast,
-} from "heroui-native";
 import { useRef } from "react";
-import { Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import z from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { Colors, RADIUS_CARD, RADIUS_INPUT, TAP_MIN } from "@/theme";
 import { queryClient } from "@/utils/trpc";
 
 const signInSchema = z.object({
@@ -50,7 +41,6 @@ function getErrorMessage(error: unknown): string | null {
 
 function SignIn() {
   const passwordInputRef = useRef<TextInput>(null);
-  const { toast } = useToast();
 
   const form = useForm({
     defaultValues: {
@@ -61,34 +51,23 @@ function SignIn() {
       onSubmit: signInSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      await authClient.signIn.email(
-        {
-          email: value.email.trim(),
-          password: value.password,
-        },
-        {
-          onError(error) {
-            toast.show({
-              variant: "danger",
-              label: error.error?.message || "Failed to sign in",
-            });
-          },
-          onSuccess() {
-            formApi.reset();
-            toast.show({
-              variant: "success",
-              label: "Signed in successfully",
-            });
-            queryClient.refetchQueries();
-          },
-        },
-      );
+      const { error } = await authClient.signIn.email({
+        email: value.email.trim(),
+        password: value.password,
+      });
+      if (error) {
+        throw new Error(error.message || "Failed to sign in");
+      }
+      formApi.reset();
+      queryClient.refetchQueries();
     },
   });
 
   return (
-    <Surface variant="secondary" className="p-4 rounded-lg">
-      <Text className="text-foreground font-medium mb-4">Sign In</Text>
+    <View style={{ gap: 20 }}>
+      <Text style={{ color: Colors.text1, fontSize: 28, fontFamily: "DMSans_600SemiBold" }}>
+        Sign In
+      </Text>
 
       <form.Subscribe
         selector={(state) => ({
@@ -96,72 +75,104 @@ function SignIn() {
           validationError: getErrorMessage(state.errorMap.onSubmit),
         })}
       >
-        {({ isSubmitting, validationError }) => {
-          const formError = validationError;
+        {({ isSubmitting, validationError }) => (
+          <View style={{ gap: 16 }}>
+            {validationError && (
+              <Text style={{ color: Colors.red, fontSize: 13 }}>{validationError}</Text>
+            )}
 
-          return (
-            <>
-              <FieldError isInvalid={!!formError} className="mb-3">
-                {formError}
-              </FieldError>
+            <form.Field name="email">
+              {(field) => (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: Colors.text2, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                    Email
+                  </Text>
+                  <TextInput
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChangeText={field.handleChange}
+                    placeholder="email@example.com"
+                    placeholderTextColor={Colors.text4}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    onSubmitEditing={() => passwordInputRef.current?.focus()}
+                    style={{
+                      backgroundColor: Colors.surface2,
+                      borderRadius: RADIUS_INPUT,
+                      padding: 14,
+                      color: Colors.text1,
+                      fontSize: 16,
+                      fontFamily: "DMSans_400Regular",
+                      borderWidth: 1,
+                      borderColor: Colors.border,
+                    }}
+                  />
+                </View>
+              )}
+            </form.Field>
 
-              <View className="gap-3">
-                <form.Field name="email">
-                  {(field) => (
-                    <TextField>
-                      <Label>Email</Label>
-                      <Input
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChangeText={field.handleChange}
-                        placeholder="email@example.com"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        textContentType="emailAddress"
-                        returnKeyType="next"
-                        blurOnSubmit={false}
-                        onSubmitEditing={() => {
-                          passwordInputRef.current?.focus();
-                        }}
-                      />
-                    </TextField>
-                  )}
-                </form.Field>
+            <form.Field name="password">
+              {(field) => (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ color: Colors.text2, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                    Password
+                  </Text>
+                  <TextInput
+                    ref={passwordInputRef}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChangeText={field.handleChange}
+                    placeholder="••••••••"
+                    placeholderTextColor={Colors.text4}
+                    secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
+                    returnKeyType="go"
+                    onSubmitEditing={form.handleSubmit}
+                    style={{
+                      backgroundColor: Colors.surface2,
+                      borderRadius: RADIUS_INPUT,
+                      padding: 14,
+                      color: Colors.text1,
+                      fontSize: 16,
+                      fontFamily: "DMSans_400Regular",
+                      borderWidth: 1,
+                      borderColor: Colors.border,
+                    }}
+                  />
+                </View>
+              )}
+            </form.Field>
 
-                <form.Field name="password">
-                  {(field) => (
-                    <TextField>
-                      <Label>Password</Label>
-                      <Input
-                        ref={passwordInputRef}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChangeText={field.handleChange}
-                        placeholder="••••••••"
-                        secureTextEntry
-                        autoComplete="password"
-                        textContentType="password"
-                        returnKeyType="go"
-                        onSubmitEditing={form.handleSubmit}
-                      />
-                    </TextField>
-                  )}
-                </form.Field>
-
-                <Button onPress={form.handleSubmit} isDisabled={isSubmitting} className="mt-1">
-                  {isSubmitting ? (
-                    <Spinner size="sm" color="default" />
-                  ) : (
-                    <Button.Label>Sign In</Button.Label>
-                  )}
-                </Button>
-              </View>
-            </>
-          );
-        }}
+            <Pressable
+              onPress={form.handleSubmit}
+              disabled={isSubmitting}
+              style={({ pressed }) => ({
+                backgroundColor: Colors.accent,
+                borderRadius: RADIUS_CARD,
+                minHeight: TAP_MIN,
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 4,
+                opacity: pressed || isSubmitting ? 0.7 : 1,
+              })}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={Colors.bg} />
+              ) : (
+                <Text style={{ color: Colors.bg, fontSize: 16, fontFamily: "DMSans_600SemiBold" }}>
+                  Sign In
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
       </form.Subscribe>
-    </Surface>
+    </View>
   );
 }
 

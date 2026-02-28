@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Slot } from "expo-router";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +18,7 @@ export default function AuthLayout() {
         paddingHorizontal: 24,
       }}
     >
-      <Stack screenOptions={{ headerShown: false }} />
+      <Slot />
     </View>
   );
 }
