@@ -14,9 +14,10 @@ export const auth = betterAuth({
   trustedOrigins: [
     env.CORS_ORIGIN,
     "ironlog://",
-    ...(env.NODE_ENV === "development"
-      ? ["exp://", "exp://**", "exp://192.168.*.*:*/**", "http://localhost:8081"]
-      : []),
+    "exp://",
+    "exp://**",
+    "exp://192.168.*.*:*/**",
+    "http://localhost:8081",
   ],
   emailAndPassword: {
     enabled: true,
