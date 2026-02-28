@@ -10,6 +10,17 @@ import { authClient } from "@/lib/auth-client";
 
 export const queryClient = new QueryClient();
 
+export function getAuthHeaders(): Record<string, string> {
+  if (Platform.OS === "web") {
+    return {};
+  }
+  const cookies = authClient.getCookie();
+  if (cookies) {
+    return { Cookie: cookies };
+  }
+  return {};
+}
+
 const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
@@ -23,17 +34,7 @@ const trpcClient = createTRPCClient<AppRouter>({
                 credentials: "include",
               });
             },
-      headers() {
-        if (Platform.OS === "web") {
-          return {};
-        }
-        const headers = new Map<string, string>();
-        const cookies = authClient.getCookie();
-        if (cookies) {
-          headers.set("Cookie", cookies);
-        }
-        return Object.fromEntries(headers);
-      },
+      headers: getAuthHeaders,
     }),
   ],
 });
