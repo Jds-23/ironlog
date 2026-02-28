@@ -7,7 +7,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect } from "react";
@@ -17,6 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppThemeProvider } from "@/contexts/app-theme-context";
 import { WorkoutProvider } from "@/contexts/workout-context";
+import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -26,9 +27,20 @@ export const unstable_settings = {
 };
 
 function StackLayout() {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) {
+    return null;
+  }
+
+  if (!session) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="workout/[id]" />
       <Stack.Screen name="log/[workoutId]" options={{ presentation: "fullScreenModal" }} />
       <Stack.Screen name="session/[id]" />
