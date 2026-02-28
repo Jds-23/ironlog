@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "version": ">= 15.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SERVER_URL": "http://localhost:3000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SERVER_URL": "https://ironlog-ironmog-server-runner.joydeepsingha68.workers.dev"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_SERVER_URL": "https://ironlog-ironmog-server-runner.joydeepsingha68.workers.dev"
+      }
+    }
+  }
+}

@@ -40,6 +40,21 @@ This project uses SQLite with Drizzle ORM.
 pnpm run db:push
 ```
 
+## Environment Variables
+
+### Native App (`apps/native`)
+
+The native app requires `EXPO_PUBLIC_SERVER_URL` to connect to the API server.
+
+- **Local dev:** Copy `.env.example` to `.env` (already set to `http://localhost:3000`)
+  ```bash
+  cp apps/native/.env.example apps/native/.env
+  ```
+- **EAS builds:** The URL is set per build profile in `apps/native/eas.json`:
+  - `development` — `http://localhost:3000` (dev client)
+  - `preview` — deployed Workers URL (internal testing)
+  - `production` — deployed Workers URL
+
 Then, run the development server:
 
 ```bash
