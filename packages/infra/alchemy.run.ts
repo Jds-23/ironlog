@@ -12,7 +12,7 @@ const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
 });
 
-export const server = await Worker("server", {
+export const server = await Worker("ironmog-server", {
   cwd: "../../apps/server",
   entrypoint: "src/index.ts",
   compatibility: "node",
