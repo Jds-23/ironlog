@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { db, desc, eq } from "@ironlog/db";
+import { and, db, desc, eq } from "@ironlog/db";
 import { loggedExercises, loggedSets, sessions } from "@ironlog/db/schema";
 
-import { publicProcedure, router } from "../index";
+import { protectedProcedure, router } from "../index";
 
 export const loggedSetInput = z.object({
   weight: z.number().nullable().optional(),
@@ -48,9 +48,9 @@ export function computeSessionStats(
   return { totalSetsDone, totalVolume };
 }
 
-async function fetchSessionWithChildren(id: number) {
+async function fetchSessionWithChildren(id: number, userId: string) {
   return db.query.sessions.findFirst({
-    where: eq(sessions.id, id),
+    where: and(eq(sessions.id, id), eq(sessions.userId, userId)),
     with: {
       loggedExercises: {
         orderBy: loggedExercises.order,
@@ -89,8 +89,9 @@ async function insertLoggedExercisesAndSets(
 }
 
 export const sessionRouter = router({
-  list: publicProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     const rows = await db.query.sessions.findMany({
+      where: eq(sessions.userId, ctx.userId),
       orderBy: [desc(sessions.finishedAt), desc(sessions.id)],
       with: {
         loggedExercises: {
@@ -109,18 +110,19 @@ export const sessionRouter = router({
     }));
   }),
 
-  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    const session = await fetchSessionWithChildren(input.id);
+  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+    const session = await fetchSessionWithChildren(input.id, ctx.userId);
     if (!session) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
     }
     return { ...session, ...computeSessionStats(session.loggedExercises) };
   }),
 
-  create: publicProcedure.input(createSessionInput).mutation(async ({ input }) => {
+  create: protectedProcedure.input(createSessionInput).mutation(async ({ input, ctx }) => {
     const [inserted] = await db
       .insert(sessions)
       .values({
+        userId: ctx.userId,
         workoutId: input.workoutId,
         workoutTitle: input.workoutTitle,
         startedAt: input.startedAt,
@@ -129,18 +131,20 @@ export const sessionRouter = router({
       })
       .returning();
     await insertLoggedExercisesAndSets(inserted!.id, input.exercises);
-    const session = await fetchSessionWithChildren(inserted!.id);
+    const session = await fetchSessionWithChildren(inserted!.id, ctx.userId);
     return { ...session!, ...computeSessionStats(session!.loggedExercises) };
   }),
 
-  delete: publicProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-    const existing = await db.query.sessions.findFirst({
-      where: eq(sessions.id, input.id),
-    });
-    if (!existing) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
-    }
-    await db.delete(sessions).where(eq(sessions.id, input.id));
-    return { success: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const existing = await db.query.sessions.findFirst({
+        where: and(eq(sessions.id, input.id), eq(sessions.userId, ctx.userId)),
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
+      }
+      await db.delete(sessions).where(eq(sessions.id, input.id));
+      return { success: true };
+    }),
 });

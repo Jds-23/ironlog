@@ -1,11 +1,15 @@
 import { relations } from "drizzle-orm";
 import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { user } from "./auth";
 import { workouts } from "./workouts";
 
 export const sessions = sqliteTable(
   "sessions",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
     workoutId: integer("workout_id")
       .notNull()
       .references(() => workouts.id),
@@ -14,7 +18,10 @@ export const sessions = sqliteTable(
     finishedAt: integer("finished_at").notNull(),
     durationSeconds: integer("duration_seconds").notNull(),
   },
-  (table) => [index("sessions_workout_id_idx").on(table.workoutId)],
+  (table) => [
+    index("sessions_user_id_idx").on(table.userId),
+    index("sessions_workout_id_idx").on(table.workoutId),
+  ],
 );
 
 export const loggedExercises = sqliteTable(
