@@ -1,4 +1,4 @@
-import type { LoggedExercise, Session } from "@/contexts/workout-context";
+import type { LoggedExercise, Session } from "@/types/workout";
 
 import {
   calcCompletedSets,

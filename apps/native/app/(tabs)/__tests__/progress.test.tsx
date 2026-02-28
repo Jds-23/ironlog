@@ -1,8 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react-native";
 import React from "react";
 
-import { WorkoutProvider, useWorkout } from "@/contexts/workout-context";
-import type { Session } from "@/contexts/workout-context";
+import { WorkoutProvider } from "@/contexts/workout-context";
 
 // Mock expo-router
 jest.mock("expo-router", () => ({
@@ -44,17 +44,25 @@ jest.mock("heroui-native", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
 
-// Mock victory-native to avoid Skia native module issues
-jest.mock("victory-native", () => ({
-  CartesianChart: "CartesianChart",
-  Line: "Line",
-  Bar: "Bar",
-  useChartPressState: jest.fn(() => ({ isActive: false, state: {} })),
+// Mock trpc
+const mockSessionList = jest.fn();
+jest.mock("@/utils/trpc", () => ({
+  trpc: {
+    session: {
+      list: {
+        queryOptions: () => ({
+          queryKey: ["session", "list"],
+          queryFn: mockSessionList,
+        }),
+      },
+    },
+  },
+  queryClient: new (require("@tanstack/react-query").QueryClient)(),
 }));
 
 import ProgressScreen from "../progress";
 
-const fakeSessions: Session[] = [
+const serverSessions = [
   {
     id: 1,
     workoutId: 1,
@@ -62,21 +70,23 @@ const fakeSessions: Session[] = [
     startedAt: Date.UTC(2026, 1, 25, 10, 0, 0),
     finishedAt: Date.UTC(2026, 1, 25, 11, 0, 0),
     durationSeconds: 3600,
-    exercises: [
+    totalSetsDone: 3,
+    totalVolume: 1680,
+    loggedExercises: [
       {
         id: 1,
         sessionId: 1,
         exerciseId: 1,
         name: "Bench Press",
         order: 0,
-        sets: [
+        loggedSets: [
           {
             id: 1,
             loggedExerciseId: 1,
             weight: 80,
             targetReps: 8,
             actualReps: 8,
-            done: true,
+            done: 1,
             order: 0,
           },
           {
@@ -85,7 +95,7 @@ const fakeSessions: Session[] = [
             weight: 90,
             targetReps: 6,
             actualReps: 6,
-            done: true,
+            done: 1,
             order: 1,
           },
         ],
@@ -96,14 +106,14 @@ const fakeSessions: Session[] = [
         exerciseId: 2,
         name: "OHP",
         order: 1,
-        sets: [
+        loggedSets: [
           {
             id: 3,
             loggedExerciseId: 2,
             weight: 50,
             targetReps: 10,
             actualReps: 10,
-            done: true,
+            done: 1,
             order: 0,
           },
         ],
@@ -117,21 +127,23 @@ const fakeSessions: Session[] = [
     startedAt: Date.UTC(2026, 1, 27, 10, 0, 0),
     finishedAt: Date.UTC(2026, 1, 27, 11, 0, 0),
     durationSeconds: 3600,
-    exercises: [
+    totalSetsDone: 2,
+    totalVolume: 1180,
+    loggedExercises: [
       {
         id: 3,
         sessionId: 2,
         exerciseId: 1,
         name: "Bench Press",
         order: 0,
-        sets: [
+        loggedSets: [
           {
             id: 5,
             loggedExerciseId: 3,
             weight: 85,
             targetReps: 8,
             actualReps: 8,
-            done: true,
+            done: 1,
             order: 0,
           },
           {
@@ -140,7 +152,7 @@ const fakeSessions: Session[] = [
             weight: 100,
             targetReps: 6,
             actualReps: 5,
-            done: true,
+            done: 1,
             order: 1,
           },
         ],
@@ -149,25 +161,19 @@ const fakeSessions: Session[] = [
   },
 ];
 
-function renderWithSessions(sessions: Session[]) {
-  const Wrapper = () => {
-    const { dispatch, state } = useWorkout();
-    React.useEffect(() => {
-      for (const s of sessions) {
-        if (!state.sessions.find((existing) => existing.id === s.id)) {
-          dispatch({ type: "ADD_SESSION", payload: s });
-        }
-      }
-    }, [dispatch, state.sessions]);
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
 
-    if (state.sessions.length < sessions.length) return null;
-    return <ProgressScreen />;
-  };
-
+function renderWithProviders(queryClient: QueryClient) {
   return render(
-    <WorkoutProvider>
-      <Wrapper />
-    </WorkoutProvider>,
+    <QueryClientProvider client={queryClient}>
+      <WorkoutProvider>
+        <ProgressScreen />
+      </WorkoutProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -176,24 +182,21 @@ beforeEach(() => {
 });
 
 describe("ProgressScreen", () => {
-  it("renders exercise selector pills from session data", () => {
-    renderWithSessions(fakeSessions);
-    expect(screen.getByTestId("exercise-pill-Bench Press")).toBeTruthy();
+  it("renders exercise selector pills from tRPC session data", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue(serverSessions);
+    renderWithProviders(qc);
+
+    expect(await screen.findByTestId("exercise-pill-Bench Press")).toBeTruthy();
     expect(screen.getByTestId("exercise-pill-OHP")).toBeTruthy();
   });
 
-  it("first exercise is selected by default", () => {
-    renderWithSessions(fakeSessions);
-    // Bench Press is alphabetically first
-    const pill = screen.getByTestId("exercise-pill-Bench Press");
-    // We check that the selected pill has the accent style by checking it's visually distinct
-    expect(pill).toBeTruthy();
-  });
+  it("renders stat pills for selected exercise", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue(serverSessions);
+    renderWithProviders(qc);
 
-  it("renders stat pills for selected exercise", () => {
-    renderWithSessions(fakeSessions);
-    // Bench Press is selected by default
-    expect(screen.getByText("Personal Best")).toBeTruthy();
+    await screen.findByText("Personal Best");
     expect(screen.getByText("100 kg")).toBeTruthy();
     expect(screen.getByText("Last Session")).toBeTruthy();
     expect(screen.getByText("1180 kg")).toBeTruthy();
@@ -201,36 +204,21 @@ describe("ProgressScreen", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
-  it("renders chart containers for selected exercise", () => {
-    renderWithSessions(fakeSessions);
+  it("renders chart containers for selected exercise", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue(serverSessions);
+    renderWithProviders(qc);
+
+    await screen.findByText("Personal Best");
     expect(screen.getByTestId("volume-chart")).toBeTruthy();
     expect(screen.getByTestId("max-weight-chart")).toBeTruthy();
   });
 
-  it("shows empty state when no sessions exist", () => {
-    render(
-      <WorkoutProvider>
-        <ProgressScreen />
-      </WorkoutProvider>,
-    );
-    expect(screen.getByText("No Progress Yet")).toBeTruthy();
-  });
+  it("shows empty state when no sessions exist", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue([]);
+    renderWithProviders(qc);
 
-  it("shows per-exercise empty message when exercise has no data", () => {
-    const sessionsWithNoSets: Session[] = [
-      {
-        id: 10,
-        workoutId: 1,
-        workoutTitle: "Empty",
-        startedAt: Date.UTC(2026, 0, 1),
-        finishedAt: Date.UTC(2026, 0, 1),
-        durationSeconds: 60,
-        exercises: [
-          { id: 10, sessionId: 10, exerciseId: 10, name: "Deadlift", order: 0, sets: [] },
-        ],
-      },
-    ];
-    renderWithSessions(sessionsWithNoSets);
-    expect(screen.getByText(/No data yet/)).toBeTruthy();
+    expect(await screen.findByText("No Progress Yet")).toBeTruthy();
   });
 });

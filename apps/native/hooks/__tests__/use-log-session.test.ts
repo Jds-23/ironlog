@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react-native";
 
-import type { Workout } from "@/contexts/workout-context";
+import type { Workout } from "@/types/workout";
 
 import { useLogSession } from "../use-log-session";
 
@@ -159,6 +159,39 @@ describe("useLogSession", () => {
     expect(session!.exercises[0].sets[0].weight).toBe(140);
     expect(session!.exercises[0].sets[0].actualReps).toBe(6);
     expect(session!.exercises[0].sets[0].done).toBe(true);
+  });
+
+  it("buildSessionInput returns tRPC-compatible payload without client IDs", () => {
+    const { result } = renderHook(() => useLogSession(workout));
+    act(() => {
+      result.current.updateWeight(0, 0, 140);
+      result.current.updateReps(0, 0, 6);
+      result.current.toggleDone(0, 0);
+    });
+    const startedAt = 5000;
+    let input: ReturnType<typeof result.current.buildSessionInput>;
+    act(() => {
+      input = result.current.buildSessionInput(startedAt);
+    });
+    expect(input!.workoutId).toBe(1);
+    expect(input!.workoutTitle).toBe("Push Day");
+    expect(input!.startedAt).toBe(5000);
+    expect(input!.finishedAt).toBeGreaterThan(0);
+    expect(input!.durationSeconds).toBeGreaterThanOrEqual(0);
+    expect(input!.exercises).toHaveLength(2);
+    // No client IDs
+    expect(input!.exercises[0]).not.toHaveProperty("id");
+    expect(input!.exercises[0]).not.toHaveProperty("sessionId");
+    expect(input!.exercises[0]).not.toHaveProperty("order");
+    expect(input!.exercises[0].sets[0]).not.toHaveProperty("id");
+    expect(input!.exercises[0].sets[0]).not.toHaveProperty("loggedExerciseId");
+    expect(input!.exercises[0].sets[0]).not.toHaveProperty("order");
+    // Correct data
+    expect(input!.exercises[0].exerciseId).toBe(10);
+    expect(input!.exercises[0].name).toBe("Bench Press");
+    expect(input!.exercises[0].sets[0].weight).toBe(140);
+    expect(input!.exercises[0].sets[0].actualReps).toBe(6);
+    expect(input!.exercises[0].sets[0].done).toBe(true);
   });
 
   it("handles null weight and reps in template", () => {

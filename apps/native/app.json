@@ -9,13 +9,21 @@
     },
     "name": "IronLog",
     "slug": "ironlog",
-    "plugins": ["expo-font", "expo-router"],
+    "plugins": [
+      "expo-font",
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "android": {
-      "permissions": ["VIBRATE"]
+      "permissions": [
+        "VIBRATE"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.anonymous.ironlog"
     }
   }
 }

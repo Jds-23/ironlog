@@ -1,6 +1,7 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -16,12 +17,14 @@ import { BottomBar } from "@/components/bottom-bar";
 import { NumpadModal } from "@/components/numpad-modal";
 import { RestTimerBanner } from "@/components/rest-timer";
 import type { NumpadMode } from "@/utils/numpad";
-import type { Workout } from "@/contexts/workout-context";
-import { getWorkoutById, useWorkout } from "@/contexts/workout-context";
+import type { Workout } from "@/types/workout";
+import { useWorkout } from "@/contexts/workout-context";
 import { useElapsedTimer } from "@/hooks/use-elapsed-timer";
 import { useLogSession } from "@/hooks/use-log-session";
 import { useRestTimer } from "@/hooks/use-rest-timer";
 import { Colors, RADIUS_CARD, TAP_MIN } from "@/theme";
+import { trpc } from "@/utils/trpc";
+import { mapServerWorkout } from "@/utils/workout-mappers";
 
 type NumpadState = {
   visible: boolean;
@@ -44,8 +47,13 @@ const numpadClosed: NumpadState = {
 export default function LogSessionScreen() {
   const { workoutId } = useLocalSearchParams<{ workoutId: string }>();
   const insets = useSafeAreaInsets();
-  const { state, dispatch } = useWorkout();
-  const workout = getWorkoutById(state, Number(workoutId));
+  const { dispatch } = useWorkout();
+
+  const workoutQuery = useQuery(trpc.workout.getById.queryOptions({ id: Number(workoutId) }));
+  const workout = useMemo(
+    () => (workoutQuery.data ? mapServerWorkout(workoutQuery.data) : undefined),
+    [workoutQuery.data],
+  );
 
   useEffect(() => {
     dispatch({ type: "SET_ACTIVE_WORKOUT", payload: { id: Number(workoutId) } });
@@ -53,6 +61,19 @@ export default function LogSessionScreen() {
       dispatch({ type: "CLEAR_ACTIVE_WORKOUT" });
     };
   }, [dispatch, workoutId]);
+
+  if (workoutQuery.isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ActivityIndicator
+          testID="log-loading"
+          size="large"
+          color={Colors.accent}
+          style={{ marginTop: 40 }}
+        />
+      </View>
+    );
+  }
 
   if (!workout) {
     return (
@@ -69,9 +90,18 @@ function LogSessionInner({ workout }: { workout: Workout }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { dispatch } = useWorkout();
+  const queryClient = useQueryClient();
   const startedAtRef = useRef(Date.now());
   const { elapsed, formatTime } = useElapsedTimer();
   const log = useLogSession(workout);
+
+  const sessionCreateMutation = useMutation({
+    ...trpc.session.create.mutationOptions(),
+    retry: 3,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+    },
+  });
 
   const restTimer = useRestTimer(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -129,8 +159,8 @@ function LogSessionInner({ workout }: { workout: Workout }) {
   }
 
   function handleFinish() {
-    const session = log.buildSession(startedAtRef.current);
-    dispatch({ type: "ADD_SESSION", payload: session });
+    const input = log.buildSessionInput(startedAtRef.current);
+    sessionCreateMutation.mutate(input);
     dispatch({ type: "CLEAR_ACTIVE_WORKOUT" });
     router.replace("/(tabs)/workouts");
   }
