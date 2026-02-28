@@ -15,7 +15,7 @@
     "dev:server": "pnpm --filter server dev",
     "db:push": "pnpm --filter @ironlog/db db:push",
     "db:generate": "pnpm --filter @ironlog/db db:generate",
-    "deploy": "pnpm --filter @ironlog/infra deploy",
+    "deploy": "pnpm --filter @ironlog/infra run deploy:run",
     "destroy": "pnpm --filter @ironlog/infra destroy",
     "check": "oxlint && oxfmt --write",
     "check:ci": "oxlint && oxfmt --check",
