@@ -13,11 +13,11 @@ jest.mock("@/lib/auth-client", () => ({
 }));
 
 // Mock expo-router
+const mockReplace = jest.fn();
+const mockUseSegments = jest.fn<() => string[]>().mockReturnValue([]);
 jest.mock("expo-router", () => ({
-  Redirect: ({ href }: { href: string }) => {
-    const { Text } = require("react-native");
-    return <Text testID="redirect">{href}</Text>;
-  },
+  useRouter: () => ({ replace: (...args: unknown[]) => mockReplace(...args) }),
+  useSegments: () => mockUseSegments(),
   Stack: Object.assign(
     ({ children }: { children: React.ReactNode }) => {
       const { View } = require("react-native");
@@ -83,6 +83,7 @@ import Layout from "../_layout";
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseSegments.mockReturnValue([]);
 });
 
 describe("Root Layout auth gate", () => {
@@ -91,8 +92,7 @@ describe("Root Layout auth gate", () => {
 
     render(<Layout />);
 
-    const redirect = screen.getByTestId("redirect");
-    expect(redirect.props.children).toBe("/(auth)/sign-in");
+    expect(mockReplace).toHaveBeenCalledWith("/(auth)/sign-in");
   });
 
   it("returns null while session is loading", () => {
@@ -101,6 +101,7 @@ describe("Root Layout auth gate", () => {
     const { toJSON } = render(<Layout />);
 
     expect(toJSON()).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it("renders stack when authenticated", () => {
@@ -113,6 +114,18 @@ describe("Root Layout auth gate", () => {
 
     expect(screen.getByTestId("stack")).toBeTruthy();
     expect(screen.getByTestId("screen-(tabs)")).toBeTruthy();
-    expect(screen.queryByTestId("redirect")).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("redirects to tabs when authenticated user is on auth screen", () => {
+    mockUseSegments.mockReturnValue(["(auth)"]);
+    mockUseSession.mockReturnValue({
+      data: { user: { id: "1", email: "test@example.com", name: "Test" } },
+      isPending: false,
+    });
+
+    render(<Layout />);
+
+    expect(mockReplace).toHaveBeenCalledWith("/(tabs)");
   });
 });
