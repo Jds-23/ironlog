@@ -1,12 +1,17 @@
 import alchemy from "alchemy";
 import { Worker } from "alchemy/cloudflare";
 import { D1Database } from "alchemy/cloudflare";
+import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 
 config({ path: "./.env" });
 config({ path: "../../apps/server/.env" });
 
-const app = await alchemy("ironlog");
+const app = await alchemy("ironlog", {
+  stateStore: process.env.CI
+    ? (scope) => new CloudflareStateStore(scope)
+    : undefined,
+});
 
 const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
