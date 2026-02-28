@@ -8,9 +8,7 @@ config({ path: "./.env" });
 config({ path: "../../apps/server/.env" });
 
 const app = await alchemy("ironlog", {
-  stateStore: process.env.CI
-    ? (scope) => new CloudflareStateStore(scope)
-    : undefined,
+  stateStore: process.env.CI ? (scope) => new CloudflareStateStore(scope) : undefined,
 });
 
 const db = await D1Database("database", {
