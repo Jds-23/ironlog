@@ -3,12 +3,14 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
+    "dev": "wrangler dev",
     "build": "tsdown",
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:setup:local": "wrangler d1 execute DB --local --file=setup-local-db.sql"
   },
   "dependencies": {
     "@hono/trpc-server": "^0.4.0",
