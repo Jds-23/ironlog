@@ -1,4 +1,4 @@
-import type { Session } from "@/contexts/workout-context";
+import type { Session } from "@/types/workout";
 
 import { getExerciseStats, getMaxWeightOverTime, getVolumeOverTime } from "../progress";
 

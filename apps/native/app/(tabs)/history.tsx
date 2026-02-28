@@ -1,21 +1,16 @@
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getAllSessions, useWorkout } from "@/contexts/workout-context";
-import type { Session } from "@/contexts/workout-context";
 import { Colors, RADIUS_CARD, TAP_MIN } from "@/theme";
-import {
-  calcCompletedSets,
-  calcTotalVolume,
-  formatDuration,
-  formatSessionDate,
-} from "@/utils/session";
+import { formatDuration, formatSessionDate } from "@/utils/session";
+import type { MappedListSession } from "@/utils/session-mappers";
+import { mapServerListSession } from "@/utils/session-mappers";
+import { trpc } from "@/utils/trpc";
 
-function SessionCard({ session, onPress }: { session: Session; onPress: () => void }) {
-  const totalSets = calcCompletedSets(session.exercises);
-  const volume = calcTotalVolume(session.exercises);
-
+function SessionCard({ session, onPress }: { session: MappedListSession; onPress: () => void }) {
   return (
     <Pressable
       testID={`session-card-${session.id}`}
@@ -27,10 +22,10 @@ function SessionCard({ session, onPress }: { session: Session; onPress: () => vo
       <Text style={styles.cardDuration}>{formatDuration(session.durationSeconds)}</Text>
       <View style={styles.pillRow}>
         <View style={styles.pill}>
-          <Text style={styles.pillText}>{totalSets} sets</Text>
+          <Text style={styles.pillText}>{session.totalSetsDone} sets</Text>
         </View>
         <View style={styles.pill}>
-          <Text style={styles.pillText}>{volume} kg</Text>
+          <Text style={styles.pillText}>{session.totalVolume} kg</Text>
         </View>
       </View>
     </Pressable>
@@ -39,9 +34,21 @@ function SessionCard({ session, onPress }: { session: Session; onPress: () => vo
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { state } = useWorkout();
-  const sessions = getAllSessions(state);
   const insets = useSafeAreaInsets();
+
+  const sessionsQuery = useQuery(trpc.session.list.queryOptions());
+  const sessions = useMemo(
+    () => (sessionsQuery.data ?? []).map(mapServerListSession),
+    [sessionsQuery.data],
+  );
+
+  if (sessionsQuery.isLoading) {
+    return (
+      <View style={[styles.emptyContainer, { paddingBottom: insets.bottom }]}>
+        <ActivityIndicator testID="history-loading" size="large" color={Colors.accent} />
+      </View>
+    );
+  }
 
   if (sessions.length === 0) {
     return (

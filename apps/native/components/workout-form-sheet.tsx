@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   Modal,
@@ -10,8 +11,9 @@ import {
   View,
 } from "react-native";
 
-import type { Exercise, Workout, WorkoutAction } from "@/contexts/workout-context";
+import type { Workout } from "@/types/workout";
 import { Colors, RADIUS_CARD, RADIUS_INPUT, TAP_MIN } from "@/theme";
+import { trpc } from "@/utils/trpc";
 
 import { ExerciseAutocomplete } from "./exercise-autocomplete";
 
@@ -22,7 +24,6 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   editWorkout: Workout | null;
-  dispatch: React.Dispatch<WorkoutAction>;
 };
 
 function makeSet(): FormSet {
@@ -33,10 +34,25 @@ function makeExercise(name: string): FormExercise {
   return { localId: String(Date.now()) + String(Math.random()), name, sets: [makeSet()] };
 }
 
-export function WorkoutFormSheet({ visible, onClose, editWorkout, dispatch }: Props) {
+export function WorkoutFormSheet({ visible, onClose, editWorkout }: Props) {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [exercises, setExercises] = useState<FormExercise[]>([]);
   const [searchText, setSearchText] = useState("");
+
+  const createMutation = useMutation({
+    mutationFn: trpc.workout.create.mutationOptions().mutationFn!,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout", "list"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: trpc.workout.update.mutationOptions().mutationFn!,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout", "list"] });
+    },
+  });
 
   useEffect(() => {
     if (!visible) return;
@@ -106,31 +122,20 @@ export function WorkoutFormSheet({ visible, onClose, editWorkout, dispatch }: Pr
   function handleSave() {
     if (!title.trim()) return;
 
-    const baseId = Date.now();
-    const builtExercises: Exercise[] = exercises.map((fe, ei) => ({
-      id: baseId + ei + 1,
-      workoutId: editWorkout?.id ?? baseId,
+    const exerciseInputs = exercises.map((fe) => ({
       name: fe.name,
-      order: ei,
-      sets: fe.sets.map((fs, si) => ({
-        id: baseId + ei * 100 + si + 1000,
-        exerciseId: baseId + ei + 1,
+      sets: fe.sets.map((fs) => ({
         weight: fs.weight ? Number(fs.weight) : null,
         targetReps: fs.targetReps ? Number(fs.targetReps) : null,
-        order: si,
       })),
     }));
 
+    const input = { title: title.trim(), exercises: exerciseInputs };
+
     if (editWorkout) {
-      dispatch({
-        type: "UPDATE_WORKOUT",
-        payload: { id: editWorkout.id, title: title.trim(), exercises: builtExercises },
-      });
+      updateMutation.mutate({ ...input, id: editWorkout.id });
     } else {
-      dispatch({
-        type: "ADD_WORKOUT",
-        payload: { title: title.trim(), exercises: builtExercises },
-      });
+      createMutation.mutate(input);
     }
     onClose();
   }

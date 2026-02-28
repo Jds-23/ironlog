@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import type { LoggedExercise, LoggedSet, Session, Workout } from "@/contexts/workout-context";
+import type { LoggedExercise, LoggedSet, Session, Workout } from "@/types/workout";
 
 type LogSet = {
   weight: number | null;
@@ -153,6 +153,48 @@ export function useLogSession(workout: Workout) {
     [logExercises, workout.id, workout.title],
   );
 
+  type SessionInput = {
+    workoutId: number;
+    workoutTitle: string;
+    startedAt: number;
+    finishedAt: number;
+    durationSeconds: number;
+    exercises: {
+      exerciseId: number;
+      name: string;
+      sets: {
+        weight: number | null;
+        targetReps: number | null;
+        actualReps: number | null;
+        done: boolean;
+      }[];
+    }[];
+  };
+
+  const buildSessionInput = useCallback(
+    (startedAt: number): SessionInput => {
+      const now = Date.now();
+      return {
+        workoutId: workout.id,
+        workoutTitle: workout.title,
+        startedAt,
+        finishedAt: now,
+        durationSeconds: Math.round((now - startedAt) / 1000),
+        exercises: logExercises.map((ex) => ({
+          exerciseId: ex.exerciseId,
+          name: ex.name,
+          sets: ex.sets.map((s) => ({
+            weight: s.weight,
+            targetReps: s.targetReps,
+            actualReps: s.actualReps,
+            done: s.done,
+          })),
+        })),
+      };
+    },
+    [logExercises, workout.id, workout.title],
+  );
+
   return {
     logExercises,
     updateWeight,
@@ -162,5 +204,6 @@ export function useLogSession(workout: Workout) {
     progress,
     allDone,
     buildSession,
+    buildSessionInput,
   };
 }

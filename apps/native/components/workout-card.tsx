@@ -1,18 +1,18 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { Workout, WorkoutState } from "@/contexts/workout-context";
-import { isWorkoutActive } from "@/contexts/workout-context";
+import type { Workout } from "@/types/workout";
+import { isWorkoutActive, useWorkout } from "@/contexts/workout-context";
 import { Colors, RADIUS_CARD, TAP_MIN } from "@/theme";
 
 type Props = {
   workout: Workout;
-  state: WorkoutState;
   onEdit: () => void;
   onDelete: () => void;
   onStart: () => void;
 };
 
-export function WorkoutCard({ workout, state, onEdit, onDelete, onStart }: Props) {
+export function WorkoutCard({ workout, onEdit, onDelete, onStart }: Props) {
+  const { state } = useWorkout();
   const active = isWorkoutActive(state, workout.id);
   const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets.length, 0);
 

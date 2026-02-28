@@ -1,4 +1,4 @@
-import type { LoggedExercise, Session } from "@/contexts/workout-context";
+import type { LoggedExercise, Session } from "@/types/workout";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

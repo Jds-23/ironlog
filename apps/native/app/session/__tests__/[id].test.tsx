@@ -1,8 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
-import { WorkoutProvider, useWorkout } from "@/contexts/workout-context";
-import type { Session } from "@/contexts/workout-context";
+import { WorkoutProvider } from "@/contexts/workout-context";
 
 // Mock expo-router
 const mockRouter = { back: jest.fn() };
@@ -47,30 +47,48 @@ jest.mock("heroui-native", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
 
+// Mock trpc
+const mockSessionGetById = jest.fn();
+jest.mock("@/utils/trpc", () => ({
+  trpc: {
+    session: {
+      getById: {
+        queryOptions: (input: { id: number }) => ({
+          queryKey: ["session", "getById", input],
+          queryFn: () => mockSessionGetById(input),
+        }),
+      },
+    },
+  },
+  queryClient: new (require("@tanstack/react-query").QueryClient)(),
+}));
+
 import SessionDetailScreen from "../[id]";
 
-const fakeSession: Session = {
+const serverSession = {
   id: 1,
   workoutId: 1,
   workoutTitle: "Push Day",
   startedAt: Date.UTC(2026, 1, 27, 14, 32, 0),
   finishedAt: Date.UTC(2026, 1, 27, 15, 17, 30),
   durationSeconds: 2730,
-  exercises: [
+  totalSetsDone: 3,
+  totalVolume: 2000,
+  loggedExercises: [
     {
       id: 1,
       sessionId: 1,
       exerciseId: 1,
       name: "Bench Press",
       order: 0,
-      sets: [
+      loggedSets: [
         {
           id: 1,
           loggedExerciseId: 1,
           weight: 100,
           targetReps: 8,
           actualReps: 8,
-          done: true,
+          done: 1,
           order: 0,
         },
         {
@@ -79,7 +97,7 @@ const fakeSession: Session = {
           weight: 100,
           targetReps: 8,
           actualReps: 6,
-          done: false,
+          done: 0,
           order: 1,
         },
       ],
@@ -90,14 +108,14 @@ const fakeSession: Session = {
       exerciseId: 2,
       name: "OHP",
       order: 1,
-      sets: [
+      loggedSets: [
         {
           id: 3,
           loggedExerciseId: 2,
           weight: 60,
           targetReps: 10,
           actualReps: 10,
-          done: true,
+          done: 1,
           order: 0,
         },
       ],
@@ -105,23 +123,19 @@ const fakeSession: Session = {
   ],
 };
 
-function renderWithSession(session: Session) {
-  const Wrapper = () => {
-    const { dispatch, state } = useWorkout();
-    React.useEffect(() => {
-      if (!state.sessions.find((s) => s.id === session.id)) {
-        dispatch({ type: "ADD_SESSION", payload: session });
-      }
-    }, [dispatch, state.sessions]);
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
 
-    if (state.sessions.length === 0) return null;
-    return <SessionDetailScreen />;
-  };
-
+function renderWithProviders(queryClient: QueryClient) {
   return render(
-    <WorkoutProvider>
-      <Wrapper />
-    </WorkoutProvider>,
+    <QueryClientProvider client={queryClient}>
+      <WorkoutProvider>
+        <SessionDetailScreen />
+      </WorkoutProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -131,43 +145,54 @@ beforeEach(() => {
 });
 
 describe("SessionDetailScreen", () => {
-  it("shows not-found state for invalid session ID", () => {
+  it("shows not-found state when query returns no data", async () => {
     mockParams = { id: "999" };
-    render(
-      <WorkoutProvider>
-        <SessionDetailScreen />
-      </WorkoutProvider>,
-    );
-    expect(screen.getByText("Session not found")).toBeTruthy();
+    const qc = createQueryClient();
+    mockSessionGetById.mockResolvedValue(undefined);
+    renderWithProviders(qc);
+
+    // Wait for query to resolve
+    await screen.findByText("Session not found");
   });
 
-  it("renders header with workout name, date, duration, and volume", () => {
+  it("renders header with workout name, date, duration, and volume", async () => {
     mockParams = { id: "1" };
-    renderWithSession(fakeSession);
-    expect(screen.getByText("Push Day")).toBeTruthy();
+    const qc = createQueryClient();
+    mockSessionGetById.mockResolvedValue(serverSession);
+    renderWithProviders(qc);
+
+    expect(await screen.findByText("Push Day")).toBeTruthy();
     expect(screen.getByText(/27 Feb 2026/)).toBeTruthy();
     expect(screen.getByText("45m 30s")).toBeTruthy();
     expect(screen.getByText("2000 kg")).toBeTruthy();
   });
 
-  it("renders exercise breakdown with set details", () => {
+  it("renders exercise breakdown with set details, done=1 maps to checkmark", async () => {
     mockParams = { id: "1" };
-    renderWithSession(fakeSession);
-    // Exercise names
+    const qc = createQueryClient();
+    mockSessionGetById.mockResolvedValue(serverSession);
+    renderWithProviders(qc);
+
+    await screen.findByText("Push Day");
     expect(screen.getByText("Bench Press")).toBeTruthy();
     expect(screen.getByText("OHP")).toBeTruthy();
-    // Set rows (weight × reps)
     expect(screen.getAllByText("100 kg").length).toBe(2);
     expect(screen.getByText("60 kg")).toBeTruthy();
-    // Actual reps
     expect(screen.getByText("8/8")).toBeTruthy();
     expect(screen.getByText("6/8")).toBeTruthy();
     expect(screen.getByText("10/10")).toBeTruthy();
+    // done=1 → ✓, done=0 → ○
+    expect(screen.getAllByText("✓").length).toBe(2);
+    expect(screen.getAllByText("○").length).toBe(1);
   });
 
-  it("back button calls router.back()", () => {
+  it("back button calls router.back()", async () => {
     mockParams = { id: "1" };
-    renderWithSession(fakeSession);
+    const qc = createQueryClient();
+    mockSessionGetById.mockResolvedValue(serverSession);
+    renderWithProviders(qc);
+
+    await screen.findByText("Push Day");
     fireEvent.press(screen.getByTestId("back-btn"));
     expect(mockRouter.back).toHaveBeenCalled();
   });

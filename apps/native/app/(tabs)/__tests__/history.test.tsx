@@ -1,8 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
-import { WorkoutProvider, useWorkout } from "@/contexts/workout-context";
-import type { Session } from "@/contexts/workout-context";
+import { WorkoutProvider } from "@/contexts/workout-context";
 
 // Mock expo-router
 const mockRouter = { push: jest.fn(), back: jest.fn() };
@@ -40,89 +40,102 @@ jest.mock("react-native-reanimated", () => {
   };
 });
 
-// Mock heroui-native (avoids deep native module chain)
+// Mock heroui-native
 jest.mock("heroui-native", () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
 
+// Mock trpc
+const mockSessionList = jest.fn();
+jest.mock("@/utils/trpc", () => ({
+  trpc: {
+    session: {
+      list: {
+        queryOptions: () => ({
+          queryKey: ["session", "list"],
+          queryFn: mockSessionList,
+        }),
+      },
+    },
+  },
+  queryClient: new (require("@tanstack/react-query").QueryClient)(),
+}));
+
 import HistoryScreen from "../history";
 
-const fakeSession: Session = {
-  id: 1,
-  workoutId: 1,
-  workoutTitle: "Push Day",
-  startedAt: Date.UTC(2026, 1, 27, 14, 32, 0),
-  finishedAt: Date.UTC(2026, 1, 27, 15, 17, 30),
-  durationSeconds: 2730,
-  exercises: [
-    {
-      id: 1,
-      sessionId: 1,
-      exerciseId: 1,
-      name: "Bench Press",
-      order: 0,
-      sets: [
-        {
-          id: 1,
-          loggedExerciseId: 1,
-          weight: 100,
-          targetReps: 8,
-          actualReps: 8,
-          done: true,
-          order: 0,
-        },
-        {
-          id: 2,
-          loggedExerciseId: 1,
-          weight: 100,
-          targetReps: 8,
-          actualReps: 6,
-          done: true,
-          order: 1,
-        },
-      ],
-    },
-    {
-      id: 2,
-      sessionId: 1,
-      exerciseId: 2,
-      name: "OHP",
-      order: 1,
-      sets: [
-        {
-          id: 3,
-          loggedExerciseId: 2,
-          weight: 60,
-          targetReps: 10,
-          actualReps: 10,
-          done: true,
-          order: 0,
-        },
-      ],
-    },
-  ],
-};
+const serverSessions = [
+  {
+    id: 1,
+    workoutId: 1,
+    workoutTitle: "Push Day",
+    startedAt: Date.UTC(2026, 1, 27, 14, 32, 0),
+    finishedAt: Date.UTC(2026, 1, 27, 15, 17, 30),
+    durationSeconds: 2730,
+    totalSetsDone: 3,
+    totalVolume: 2000,
+    loggedExercises: [
+      {
+        id: 1,
+        sessionId: 1,
+        exerciseId: 1,
+        name: "Bench Press",
+        order: 0,
+        loggedSets: [
+          {
+            id: 1,
+            loggedExerciseId: 1,
+            weight: 100,
+            targetReps: 8,
+            actualReps: 8,
+            done: 1,
+            order: 0,
+          },
+          {
+            id: 2,
+            loggedExerciseId: 1,
+            weight: 100,
+            targetReps: 8,
+            actualReps: 6,
+            done: 1,
+            order: 1,
+          },
+        ],
+      },
+      {
+        id: 2,
+        sessionId: 1,
+        exerciseId: 2,
+        name: "OHP",
+        order: 1,
+        loggedSets: [
+          {
+            id: 3,
+            loggedExerciseId: 2,
+            weight: 60,
+            targetReps: 10,
+            actualReps: 10,
+            done: 1,
+            order: 0,
+          },
+        ],
+      },
+    ],
+  },
+];
 
-/** Renders HistoryScreen after dispatching sessions into context */
-function renderWithSessions(sessions: Session[]) {
-  const Wrapper = () => {
-    const { dispatch, state } = useWorkout();
-    React.useEffect(() => {
-      for (const s of sessions) {
-        if (!state.sessions.find((existing) => existing.id === s.id)) {
-          dispatch({ type: "ADD_SESSION", payload: s });
-        }
-      }
-    }, [dispatch, state.sessions]);
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
 
-    if (state.sessions.length < sessions.length) return null;
-    return <HistoryScreen />;
-  };
-
+function renderWithProviders(queryClient: QueryClient) {
   return render(
-    <WorkoutProvider>
-      <Wrapper />
-    </WorkoutProvider>,
+    <QueryClientProvider client={queryClient}>
+      <WorkoutProvider>
+        <HistoryScreen />
+      </WorkoutProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -131,27 +144,41 @@ beforeEach(() => {
 });
 
 describe("HistoryScreen", () => {
-  it("shows empty state when no sessions exist", () => {
-    render(
-      <WorkoutProvider>
-        <HistoryScreen />
-      </WorkoutProvider>,
-    );
-    expect(screen.getByText("No Sessions Yet")).toBeTruthy();
+  it("shows empty state when no sessions exist", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue([]);
+    renderWithProviders(qc);
+
+    expect(await screen.findByText("No Sessions Yet")).toBeTruthy();
   });
 
-  it("renders session cards with title, date, duration, and stats", () => {
-    renderWithSessions([fakeSession]);
-    expect(screen.getByText("Push Day")).toBeTruthy();
+  it("renders session cards with title, date, duration, and stats from tRPC", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue(serverSessions);
+    renderWithProviders(qc);
+
+    expect(await screen.findByText("Push Day")).toBeTruthy();
     expect(screen.getByText(/27 Feb 2026/)).toBeTruthy();
     expect(screen.getByText("45m 30s")).toBeTruthy();
     expect(screen.getByText("3 sets")).toBeTruthy();
     expect(screen.getByText("2000 kg")).toBeTruthy();
   });
 
-  it("navigates to session detail on card press", () => {
-    renderWithSessions([fakeSession]);
+  it("navigates to session detail on card press", async () => {
+    const qc = createQueryClient();
+    mockSessionList.mockResolvedValue(serverSessions);
+    renderWithProviders(qc);
+
+    await screen.findByText("Push Day");
     fireEvent.press(screen.getByTestId("session-card-1"));
     expect(mockRouter.push).toHaveBeenCalledWith("/session/1");
+  });
+
+  it("shows loading state", () => {
+    const qc = createQueryClient();
+    mockSessionList.mockReturnValue(new Promise(() => {}));
+    renderWithProviders(qc);
+
+    expect(screen.getByTestId("history-loading")).toBeTruthy();
   });
 });

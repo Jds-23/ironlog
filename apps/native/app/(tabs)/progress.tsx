@@ -1,20 +1,36 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getAllSessions, useWorkout } from "@/contexts/workout-context";
+import type { Session } from "@/types/workout";
 import { Colors, RADIUS_CARD, TAP_MIN } from "@/theme";
 import { getExerciseStats, getMaxWeightOverTime, getVolumeOverTime } from "@/utils/progress";
 import { getSessionExerciseNames } from "@/utils/session";
+import { mapServerSession } from "@/utils/session-mappers";
+import { trpc } from "@/utils/trpc";
 
 export default function ProgressScreen() {
-  const { state } = useWorkout();
-  const sessions = getAllSessions(state);
   const insets = useSafeAreaInsets();
+
+  const sessionsQuery = useQuery(trpc.session.list.queryOptions());
+  const sessions = useMemo(
+    () => (sessionsQuery.data ?? []).map(mapServerSession),
+    [sessionsQuery.data],
+  );
+
   const exerciseNames = getSessionExerciseNames(sessions);
   const [selected, setSelected] = useState<string | null>(null);
 
   const selectedExercise = selected ?? exerciseNames[0] ?? null;
+
+  if (sessionsQuery.isLoading) {
+    return (
+      <View style={[styles.emptyContainer, { paddingBottom: insets.bottom }]}>
+        <ActivityIndicator testID="progress-loading" size="large" color={Colors.accent} />
+      </View>
+    );
+  }
 
   if (sessions.length === 0) {
     return (
@@ -63,13 +79,7 @@ export default function ProgressScreen() {
   );
 }
 
-function StatsRow({
-  sessions,
-  exerciseName,
-}: {
-  sessions: ReturnType<typeof getAllSessions>;
-  exerciseName: string;
-}) {
+function StatsRow({ sessions, exerciseName }: { sessions: Session[]; exerciseName: string }) {
   const stats = getExerciseStats(sessions, exerciseName);
 
   return (
@@ -90,13 +100,7 @@ function StatsRow({
   );
 }
 
-function Charts({
-  sessions,
-  exerciseName,
-}: {
-  sessions: ReturnType<typeof getAllSessions>;
-  exerciseName: string;
-}) {
+function Charts({ sessions, exerciseName }: { sessions: Session[]; exerciseName: string }) {
   const volumeData = getVolumeOverTime(sessions, exerciseName);
   const weightData = getMaxWeightOverTime(sessions, exerciseName);
 

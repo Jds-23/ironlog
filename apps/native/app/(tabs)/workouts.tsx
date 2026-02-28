@@ -1,19 +1,34 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Container } from "@/components/container";
 import { WorkoutCard } from "@/components/workout-card";
 import { WorkoutFormSheet } from "@/components/workout-form-sheet";
-import type { Workout } from "@/contexts/workout-context";
-import { useWorkout } from "@/contexts/workout-context";
+import type { Workout } from "@/types/workout";
 import { Colors, TAP_MIN } from "@/theme";
+import { trpc } from "@/utils/trpc";
+import { mapServerWorkout } from "@/utils/workout-mappers";
 
 export default function WorkoutsScreen() {
-  const { state, dispatch } = useWorkout();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+
+  const workoutsQuery = useQuery(trpc.workout.list.queryOptions());
+  const workouts = useMemo(
+    () => (workoutsQuery.data ?? []).map(mapServerWorkout),
+    [workoutsQuery.data],
+  );
+
+  const deleteMutation = useMutation({
+    ...trpc.workout.delete.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout", "list"] });
+    },
+  });
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
@@ -28,10 +43,6 @@ export default function WorkoutsScreen() {
     setSheetVisible(true);
   }
 
-  function handleDelete(id: number) {
-    dispatch({ type: "DELETE_WORKOUT", payload: { id } });
-  }
-
   function handleStart(id: number) {
     router.push(`/log/${id}`);
   }
@@ -41,22 +52,33 @@ export default function WorkoutsScreen() {
     setEditingWorkout(null);
   }
 
+  if (workoutsQuery.isLoading) {
+    return (
+      <Container isScrollable={false}>
+        <ActivityIndicator
+          testID="workouts-loading"
+          size="large"
+          color={Colors.accent}
+          style={styles.loader}
+        />
+      </Container>
+    );
+  }
+
   return (
     <Container isScrollable={false}>
       <FlatList
-        data={state.workouts}
+        data={workouts}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={[styles.listContent, { paddingTop: insets.top + 8 }]}
         ListHeaderComponent={
           <View>
-            {/* App header */}
             <View style={styles.appHeader}>
               <Text style={styles.appTitle}>IronLog</Text>
               <Text style={styles.bolt}>⚡</Text>
             </View>
             <Text style={styles.subtitle}>Build your workout templates</Text>
 
-            {/* Section header */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>MY WORKOUTS</Text>
               <Pressable onPress={handleNew} style={styles.newBtn} hitSlop={4}>
@@ -74,9 +96,8 @@ export default function WorkoutsScreen() {
         renderItem={({ item }) => (
           <WorkoutCard
             workout={item}
-            state={state}
             onEdit={() => handleEdit(item)}
-            onDelete={() => handleDelete(item.id)}
+            onDelete={() => deleteMutation.mutate({ id: item.id })}
             onStart={() => handleStart(item.id)}
           />
         )}
@@ -86,7 +107,6 @@ export default function WorkoutsScreen() {
         visible={sheetVisible}
         onClose={handleCloseSheet}
         editWorkout={editingWorkout}
-        dispatch={dispatch}
       />
     </Container>
   );
@@ -96,6 +116,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 100,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: "center",
   },
   appHeader: {
     flexDirection: "row",

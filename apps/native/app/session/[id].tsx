@@ -1,17 +1,32 @@
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getSessionById, useWorkout } from "@/contexts/workout-context";
 import { Colors, TAP_MIN } from "@/theme";
 import { calcTotalVolume, formatDuration, formatSessionDate } from "@/utils/session";
+import { mapServerSession } from "@/utils/session-mappers";
+import { trpc } from "@/utils/trpc";
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { state } = useWorkout();
   const insets = useSafeAreaInsets();
-  const session = getSessionById(state, Number(id));
+
+  const sessionQuery = useQuery(trpc.session.getById.queryOptions({ id: Number(id) }));
+  const session = useMemo(
+    () => (sessionQuery.data ? mapServerSession(sessionQuery.data) : undefined),
+    [sessionQuery.data],
+  );
+
+  if (sessionQuery.isLoading) {
+    return (
+      <View style={[styles.centered, { paddingBottom: insets.bottom }]}>
+        <ActivityIndicator testID="session-loading" size="large" color={Colors.accent} />
+      </View>
+    );
+  }
 
   if (!session) {
     return (
