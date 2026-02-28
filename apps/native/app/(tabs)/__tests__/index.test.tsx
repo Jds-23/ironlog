@@ -70,7 +70,7 @@ jest.mock("@/utils/trpc", () => ({
   queryClient: new (require("@tanstack/react-query").QueryClient)(),
 }));
 
-import HomeScreen from "../home";
+import HomeScreen from "../index";
 
 const serverWorkouts = [
   {
