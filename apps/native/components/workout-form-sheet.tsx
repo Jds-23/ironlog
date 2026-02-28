@@ -44,6 +44,7 @@ export function WorkoutFormSheet({ visible, onClose, editWorkout }: Props) {
     mutationFn: trpc.workout.create.mutationOptions().mutationFn!,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["workout", "getById"] });
     },
   });
 
@@ -51,6 +52,7 @@ export function WorkoutFormSheet({ visible, onClose, editWorkout }: Props) {
     mutationFn: trpc.workout.update.mutationOptions().mutationFn!,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["workout", "getById"] });
     },
   });
 
