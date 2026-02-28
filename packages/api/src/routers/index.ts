@@ -1,4 +1,4 @@
-import { publicProcedure, router } from "../index";
+import { protectedProcedure, publicProcedure, router } from "../index";
 import { sessionRouter } from "./session";
 import { workoutRouter } from "./workout";
 
@@ -6,7 +6,7 @@ export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
     return "OK";
   }),
-  privateData: publicProcedure.query(() => {
+  privateData: protectedProcedure.query(() => {
     return {
       message: "This is private",
     };

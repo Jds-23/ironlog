@@ -3,14 +3,23 @@ import { eq } from "drizzle-orm";
 import { db } from "@ironlog/db";
 import { workouts, exercises, setTemplates } from "@ironlog/db/schema";
 import { createWorkoutTables } from "./helpers/setup-db";
+import { createAuthTables, signUpTestUser } from "./helpers/setup-auth";
+
+let userId: string;
 
 beforeAll(async () => {
+  await createAuthTables();
   await createWorkoutTables();
+  const { json } = await signUpTestUser({
+    email: "schema-workout@test.com",
+    password: "password123",
+  });
+  userId = json.user.id;
 });
 
 describe("workout schema", () => {
   it("insert & read workout", async () => {
-    const [inserted] = await db.insert(workouts).values({ title: "Push Day" }).returning();
+    const [inserted] = await db.insert(workouts).values({ title: "Push Day", userId }).returning();
 
     const [row] = await db.select().from(workouts).where(eq(workouts.id, inserted!.id));
 
@@ -20,7 +29,7 @@ describe("workout schema", () => {
   });
 
   it("insert & read exercise", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Pull Day" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Pull Day", userId }).returning();
 
     const [inserted] = await db
       .insert(exercises)
@@ -35,7 +44,7 @@ describe("workout schema", () => {
   });
 
   it("insert & read setTemplate", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Leg Day" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Leg Day", userId }).returning();
     const [e] = await db
       .insert(exercises)
       .values({ workoutId: w!.id, name: "Squat", order: 1 })
@@ -55,7 +64,7 @@ describe("workout schema", () => {
   });
 
   it("cascade delete workout removes exercises and setTemplates", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Temp Workout" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Temp Workout", userId }).returning();
     const [e] = await db
       .insert(exercises)
       .values({ workoutId: w!.id, name: "Bench", order: 1 })
@@ -80,7 +89,7 @@ describe("workout schema", () => {
   });
 
   it("cascade delete exercise removes its setTemplates", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Another Workout" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Another Workout", userId }).returning();
     const [e] = await db
       .insert(exercises)
       .values({ workoutId: w!.id, name: "Deadlift", order: 1 })
@@ -100,7 +109,7 @@ describe("workout schema", () => {
   });
 
   it("nullable fields - setTemplate with null weight and targetReps", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Bodyweight" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Bodyweight", userId }).returning();
     const [e] = await db
       .insert(exercises)
       .values({ workoutId: w!.id, name: "Pull-ups", order: 1 })

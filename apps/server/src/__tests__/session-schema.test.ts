@@ -4,23 +4,40 @@ import { db } from "@ironlog/db";
 import { workouts } from "@ironlog/db/schema";
 import { sessions, loggedExercises, loggedSets } from "@ironlog/db/schema";
 import { createSessionTables } from "./helpers/setup-db";
+import { createAuthTables, signUpTestUser } from "./helpers/setup-auth";
+
+let userId: string;
 
 beforeAll(async () => {
+  await createAuthTables();
   await createSessionTables();
+  const { json } = await signUpTestUser({
+    email: "schema-session@test.com",
+    password: "password123",
+  });
+  userId = json.user.id;
 });
+
+function sessionValues(workoutId: number) {
+  return {
+    userId,
+    workoutId,
+    workoutTitle: "Test",
+    startedAt: 1700000000000,
+    finishedAt: 1700003600000,
+    durationSeconds: 3600,
+  };
+}
 
 describe("session schema", () => {
   it("insert & read session", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Push Day" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Push Day", userId }).returning();
 
     const [inserted] = await db
       .insert(sessions)
       .values({
-        workoutId: w!.id,
+        ...sessionValues(w!.id),
         workoutTitle: "Push Day",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
       })
       .returning();
 
@@ -34,16 +51,10 @@ describe("session schema", () => {
   });
 
   it("insert & read loggedExercise", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Pull Day" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Pull Day", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Pull Day",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Pull Day" })
       .returning();
 
     const [inserted] = await db
@@ -63,16 +74,10 @@ describe("session schema", () => {
   });
 
   it("insert & read loggedSet", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Leg Day" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Leg Day", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Leg Day",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Leg Day" })
       .returning();
     const [le] = await db
       .insert(loggedExercises)
@@ -102,16 +107,10 @@ describe("session schema", () => {
   });
 
   it("done defaults to 0", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Default Test" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Default Test", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Default Test",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Default Test" })
       .returning();
     const [le] = await db
       .insert(loggedExercises)
@@ -129,16 +128,10 @@ describe("session schema", () => {
   });
 
   it("nullable fields - loggedSet with null weight, targetReps, actualReps", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Bodyweight" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Bodyweight", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Bodyweight",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Bodyweight" })
       .returning();
     const [le] = await db
       .insert(loggedExercises)
@@ -158,16 +151,10 @@ describe("session schema", () => {
   });
 
   it("cascade delete session removes loggedExercises and loggedSets", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Temp Workout" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Temp Workout", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Temp Workout",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Temp Workout" })
       .returning();
     const [le] = await db
       .insert(loggedExercises)
@@ -198,16 +185,10 @@ describe("session schema", () => {
   });
 
   it("cascade delete loggedExercise removes its loggedSets", async () => {
-    const [w] = await db.insert(workouts).values({ title: "Another Workout" }).returning();
+    const [w] = await db.insert(workouts).values({ title: "Another Workout", userId }).returning();
     const [s] = await db
       .insert(sessions)
-      .values({
-        workoutId: w!.id,
-        workoutTitle: "Another Workout",
-        startedAt: 1700000000000,
-        finishedAt: 1700003600000,
-        durationSeconds: 3600,
-      })
+      .values({ ...sessionValues(w!.id), workoutTitle: "Another Workout" })
       .returning();
     const [le] = await db
       .insert(loggedExercises)

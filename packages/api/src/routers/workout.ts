@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { db, desc, eq } from "@ironlog/db";
+import { and, db, desc, eq } from "@ironlog/db";
 import { exercises, setTemplates, workouts } from "@ironlog/db/schema";
 
-import { publicProcedure, router } from "../index";
+import { protectedProcedure, router } from "../index";
 
 export const exerciseInput = z.object({
   name: z.string().min(1),
@@ -21,9 +21,9 @@ export const createUpdateInput = z.object({
   exercises: z.array(exerciseInput),
 });
 
-async function fetchWorkoutWithChildren(id: number) {
+async function fetchWorkoutWithChildren(id: number, userId: string) {
   return db.query.workouts.findFirst({
-    where: eq(workouts.id, id),
+    where: and(eq(workouts.id, id), eq(workouts.userId, userId)),
     with: {
       exercises: {
         orderBy: exercises.order,
@@ -60,8 +60,9 @@ async function insertExercisesAndSets(
 }
 
 export const workoutRouter = router({
-  list: publicProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     return db.query.workouts.findMany({
+      where: eq(workouts.userId, ctx.userId),
       orderBy: [desc(workouts.createdAt), desc(workouts.id)],
       with: {
         exercises: {
@@ -76,25 +77,28 @@ export const workoutRouter = router({
     });
   }),
 
-  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    const workout = await fetchWorkoutWithChildren(input.id);
+  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+    const workout = await fetchWorkoutWithChildren(input.id, ctx.userId);
     if (!workout) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
     }
     return workout;
   }),
 
-  create: publicProcedure.input(createUpdateInput).mutation(async ({ input }) => {
-    const [inserted] = await db.insert(workouts).values({ title: input.title }).returning();
+  create: protectedProcedure.input(createUpdateInput).mutation(async ({ input, ctx }) => {
+    const [inserted] = await db
+      .insert(workouts)
+      .values({ title: input.title, userId: ctx.userId })
+      .returning();
     await insertExercisesAndSets(inserted!.id, input.exercises);
-    return fetchWorkoutWithChildren(inserted!.id);
+    return fetchWorkoutWithChildren(inserted!.id, ctx.userId);
   }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(createUpdateInput.extend({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const existing = await db.query.workouts.findFirst({
-        where: eq(workouts.id, input.id),
+        where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),
       });
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
@@ -103,17 +107,19 @@ export const workoutRouter = router({
       // Delete old exercises (cascade deletes sets)
       await db.delete(exercises).where(eq(exercises.workoutId, input.id));
       await insertExercisesAndSets(input.id, input.exercises);
-      return fetchWorkoutWithChildren(input.id);
+      return fetchWorkoutWithChildren(input.id, ctx.userId);
     }),
 
-  delete: publicProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
-    const existing = await db.query.workouts.findFirst({
-      where: eq(workouts.id, input.id),
-    });
-    if (!existing) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
-    }
-    await db.delete(workouts).where(eq(workouts.id, input.id));
-    return { success: true };
-  }),
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const existing = await db.query.workouts.findFirst({
+        where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
+      }
+      await db.delete(workouts).where(eq(workouts.id, input.id));
+      return { success: true };
+    }),
 });

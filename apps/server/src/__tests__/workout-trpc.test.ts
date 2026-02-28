@@ -1,31 +1,162 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import app from "../index";
 import { createWorkoutTables } from "./helpers/setup-db";
+import { createAuthTables, signUpTestUser, getSessionCookie } from "./helpers/setup-auth";
+
+let cookie: string;
 
 beforeAll(async () => {
+  await createAuthTables();
   await createWorkoutTables();
+  const { res } = await signUpTestUser({ email: "workout@test.com", password: "password123" });
+  cookie = getSessionCookie(res)!;
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function trpcQuery(path: string, input?: unknown): Promise<{ status: number; json: any }> {
+async function trpcQuery(
+  path: string,
+  input?: unknown,
+  cookieOverride?: string,
+): Promise<{ status: number; json: any }> {
   const url = input
     ? `/trpc/${path}?input=${encodeURIComponent(JSON.stringify(input))}`
     : `/trpc/${path}`;
-  const res = await app.request(url);
+  const headers: Record<string, string> = {};
+  const c = cookieOverride !== undefined ? cookieOverride : cookie;
+  if (c) headers["Cookie"] = c;
+  const res = await app.request(url, { headers });
   return { status: res.status, json: await res.json() };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function trpcMutation(path: string, input: unknown): Promise<{ status: number; json: any }> {
+async function trpcMutation(
+  path: string,
+  input: unknown,
+  cookieOverride?: string,
+): Promise<{ status: number; json: any }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const c = cookieOverride !== undefined ? cookieOverride : cookie;
+  if (c) headers["Cookie"] = c;
   const res = await app.request("/trpc/" + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(input),
   });
   return { status: res.status, json: await res.json() };
 }
 
 describe("workout tRPC", () => {
+  // --- auth ---
+  it("unauthenticated request to privateData returns 401", async () => {
+    const { status } = await trpcQuery("privateData", undefined, "");
+    expect(status).toBe(401);
+  });
+
+  it("authenticated request to privateData succeeds", async () => {
+    const { status, json } = await trpcQuery("privateData");
+    expect(status).toBe(200);
+    expect(json.result.data.message).toBe("This is private");
+  });
+
+  // --- user isolation ---
+  it("workout.create stores userId, workout.list returns only user's workouts", async () => {
+    // Sign up a second user
+    const { res: resB } = await signUpTestUser({
+      email: "workoutB@test.com",
+      password: "password123",
+    });
+    const cookieB = getSessionCookie(resB)!;
+
+    // User A creates a workout
+    await trpcMutation("workout.create", { title: "A's Workout", exercises: [] });
+
+    // User A lists → sees it
+    const { json: listA } = await trpcQuery("workout.list");
+    const titlesA = listA.result.data.map((w: { title: string }) => w.title);
+    expect(titlesA).toContain("A's Workout");
+
+    // User B lists → empty (B has no workouts)
+    const { json: listB } = await trpcQuery("workout.list", undefined, cookieB);
+    expect(listB.result.data).toEqual([]);
+  });
+
+  it("getById enforces ownership", async () => {
+    const { res: resB } = await signUpTestUser({
+      email: "workoutB-get@test.com",
+      password: "password123",
+    });
+    const cookieB = getSessionCookie(resB)!;
+
+    // User A creates a workout
+    const { json: createJson } = await trpcMutation("workout.create", {
+      title: "A's Private",
+      exercises: [{ name: "Squat", sets: [{ weight: 100, targetReps: 5 }] }],
+    });
+    const id = createJson.result.data.id;
+
+    // User B tries to get it → 404
+    const { status } = await trpcQuery("workout.getById", { id }, cookieB);
+    expect(status).toBe(404);
+  });
+
+  it("update enforces ownership", async () => {
+    const { res: resB } = await signUpTestUser({
+      email: "workoutB-upd@test.com",
+      password: "password123",
+    });
+    const cookieB = getSessionCookie(resB)!;
+
+    // User A creates a workout
+    const { json: createJson } = await trpcMutation("workout.create", {
+      title: "A's To Update",
+      exercises: [],
+    });
+    const id = createJson.result.data.id;
+
+    // User B tries to update → 404
+    const { status: statusB } = await trpcMutation(
+      "workout.update",
+      {
+        id,
+        title: "Hijacked",
+        exercises: [],
+      },
+      cookieB,
+    );
+    expect(statusB).toBe(404);
+
+    // User A updates → 200
+    const { status: statusA } = await trpcMutation("workout.update", {
+      id,
+      title: "A's Updated",
+      exercises: [],
+    });
+    expect(statusA).toBe(200);
+  });
+
+  it("delete enforces ownership", async () => {
+    const { res: resB } = await signUpTestUser({
+      email: "workoutB-del@test.com",
+      password: "password123",
+    });
+    const cookieB = getSessionCookie(resB)!;
+
+    // User A creates a workout
+    const { json: createJson } = await trpcMutation("workout.create", {
+      title: "A's To Delete",
+      exercises: [],
+    });
+    const id = createJson.result.data.id;
+
+    // User B tries to delete → 404
+    const { status: statusB } = await trpcMutation("workout.delete", { id }, cookieB);
+    expect(statusB).toBe(404);
+
+    // User A still sees it
+    const { status: statusA } = await trpcQuery("workout.getById", { id });
+    expect(statusA).toBe(200);
+  });
+
   // --- list ---
   it("list returns empty array initially", async () => {
     const { status, json } = await trpcQuery("workout.list");
