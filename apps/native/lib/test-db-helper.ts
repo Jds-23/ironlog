@@ -10,17 +10,21 @@ export const MIGRATIONS_FOLDER = path.resolve(
   "../../../packages/db/src/local-migrations",
 );
 
-export const MIGRATION_SQL_PATH = path.resolve(MIGRATIONS_FOLDER, "0000_smooth_orphan.sql");
-
-/** Run raw SQL statements from the migration file (no migration tracking). */
+/** Run raw SQL statements from all migration .sql files (no migration tracking). */
 export function runRawMigrations(db: InstanceType<typeof Database>) {
-  const sql = fs.readFileSync(MIGRATION_SQL_PATH, "utf-8");
-  const statements = sql
-    .split("--> statement-breakpoint")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const stmt of statements) {
-    db.exec(stmt);
+  const sqlFiles = fs
+    .readdirSync(MIGRATIONS_FOLDER)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const file of sqlFiles) {
+    const sql = fs.readFileSync(path.resolve(MIGRATIONS_FOLDER, file), "utf-8");
+    const statements = sql
+      .split("--> statement-breakpoint")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const stmt of statements) {
+      db.exec(stmt);
+    }
   }
 }
 

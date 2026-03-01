@@ -81,6 +81,9 @@ jest.mock("@/utils/trpc", () => ({
 jest.mock("@/lib/local-db-provider", () => ({
   LocalDbProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
+jest.mock("@/lib/sync-provider", () => ({
+  SyncProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 import Layout from "../_layout";
 
