@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { and, db, desc, eq } from "@ironlog/db";
+import { and, db, desc, eq, isNull } from "@ironlog/db";
 import { exercises, setTemplates, workouts } from "@ironlog/db/schema";
 
 import { protectedProcedure, router } from "../index";
@@ -23,7 +23,7 @@ export const createUpdateInput = z.object({
 
 async function fetchWorkoutWithChildren(id: string, userId: string) {
   return db.query.workouts.findFirst({
-    where: and(eq(workouts.id, id), eq(workouts.userId, userId)),
+    where: and(eq(workouts.id, id), eq(workouts.userId, userId), isNull(workouts.deletedAt)),
     with: {
       exercises: {
         orderBy: exercises.order,
@@ -64,7 +64,7 @@ async function insertExercisesAndSets(
 export const workoutRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     return db.query.workouts.findMany({
-      where: eq(workouts.userId, ctx.userId),
+      where: and(eq(workouts.userId, ctx.userId), isNull(workouts.deletedAt)),
       orderBy: [desc(workouts.createdAt), desc(workouts.id)],
       with: {
         exercises: {
@@ -100,7 +100,11 @@ export const workoutRouter = router({
     .input(createUpdateInput.extend({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.workouts.findFirst({
-        where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),
+        where: and(
+          eq(workouts.id, input.id),
+          eq(workouts.userId, ctx.userId),
+          isNull(workouts.deletedAt),
+        ),
       });
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
@@ -116,12 +120,16 @@ export const workoutRouter = router({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.workouts.findFirst({
-        where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),
+        where: and(
+          eq(workouts.id, input.id),
+          eq(workouts.userId, ctx.userId),
+          isNull(workouts.deletedAt),
+        ),
       });
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
       }
-      await db.delete(workouts).where(eq(workouts.id, input.id));
+      await db.update(workouts).set({ deletedAt: new Date() }).where(eq(workouts.id, input.id));
       return { success: true };
     }),
 });

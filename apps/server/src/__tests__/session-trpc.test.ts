@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
 import app from "../index";
 import { createSessionTables } from "./helpers/setup-db";
@@ -144,6 +145,84 @@ describe("session tRPC", () => {
     // User A still sees it
     const { status: statusA } = await trpcQuery("session.getById", { id });
     expect(statusA).toBe(200);
+  });
+
+  // --- freestyle (nullable workoutId) ---
+  it("create with null workoutId (freestyle session)", async () => {
+    const { status, json } = await trpcMutation("session.create", {
+      workoutId: null,
+      workoutTitle: "Freestyle",
+      startedAt: 1700000000,
+      finishedAt: 1700003600,
+      durationSeconds: 3600,
+      exercises: [],
+    });
+    expect(status).toBe(200);
+    const session = json.result.data;
+    expect(session.workoutId).toBeNull();
+    expect(session.workoutTitle).toBe("Freestyle");
+  });
+
+  // --- soft delete ---
+  it("list excludes soft-deleted sessions", async () => {
+    const { res: resG } = await signUpTestUser({
+      email: "session-softdel@test.com",
+      password: "password123",
+    });
+    const cookieG = getSessionCookie(resG)!;
+
+    // Create 2 sessions
+    await trpcMutation("session.create", makeSession({ workoutTitle: "Keep Session" }), cookieG);
+    const { json: c2 } = await trpcMutation(
+      "session.create",
+      makeSession({ workoutTitle: "Delete Session" }),
+      cookieG,
+    );
+    const deleteId = c2.result.data.id;
+
+    // Soft-delete one via raw SQL
+    await env.DB.exec(`UPDATE sessions SET deleted_at = ${Date.now()} WHERE id = '${deleteId}'`);
+
+    // List should return only the non-deleted session
+    const { json: listJson } = await trpcQuery("session.list", undefined, cookieG);
+    const titles = listJson.result.data.map((s: { workoutTitle: string }) => s.workoutTitle);
+    expect(titles).toContain("Keep Session");
+    expect(titles).not.toContain("Delete Session");
+    expect(listJson.result.data).toHaveLength(1);
+  });
+
+  it("delete sets deletedAt instead of hard delete", async () => {
+    const { json: createJson } = await trpcMutation(
+      "session.create",
+      makeSession({ workoutTitle: "Soft Delete Session" }),
+    );
+    const id = createJson.result.data.id;
+
+    // Delete via router
+    const { status } = await trpcMutation("session.delete", { id });
+    expect(status).toBe(200);
+
+    // getById should return 404
+    const { status: getStatus } = await trpcQuery("session.getById", { id });
+    expect(getStatus).toBe(404);
+
+    // But row still exists in DB with deletedAt set
+    const row = await env.DB.prepare("SELECT id, deleted_at FROM sessions WHERE id = ?")
+      .bind(id)
+      .first();
+    expect(row).not.toBeNull();
+    expect(row!.deleted_at).not.toBeNull();
+  });
+
+  // --- UUID PKs ---
+  it("create returns a text UUID id", async () => {
+    const { json } = await trpcMutation(
+      "session.create",
+      makeSession({ workoutTitle: "UUID Session" }),
+    );
+    const id = json.result.data.id;
+    expect(typeof id).toBe("string");
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
   // --- list ---

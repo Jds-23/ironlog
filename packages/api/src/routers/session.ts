@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { and, db, desc, eq } from "@ironlog/db";
+import { and, db, desc, eq, isNull } from "@ironlog/db";
 import { loggedExercises, loggedSets, sessions } from "@ironlog/db/schema";
 
 import { protectedProcedure, router } from "../index";
@@ -20,7 +20,7 @@ export const loggedExerciseInput = z.object({
 });
 
 export const createSessionInput = z.object({
-  workoutId: z.string(),
+  workoutId: z.string().nullable(),
   workoutTitle: z.string().trim().min(1),
   startedAt: z.number(),
   finishedAt: z.number(),
@@ -50,7 +50,7 @@ export function computeSessionStats(
 
 async function fetchSessionWithChildren(id: string, userId: string) {
   return db.query.sessions.findFirst({
-    where: and(eq(sessions.id, id), eq(sessions.userId, userId)),
+    where: and(eq(sessions.id, id), eq(sessions.userId, userId), isNull(sessions.deletedAt)),
     with: {
       loggedExercises: {
         orderBy: loggedExercises.order,
@@ -93,7 +93,7 @@ async function insertLoggedExercisesAndSets(
 export const sessionRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const rows = await db.query.sessions.findMany({
-      where: eq(sessions.userId, ctx.userId),
+      where: and(eq(sessions.userId, ctx.userId), isNull(sessions.deletedAt)),
       orderBy: [desc(sessions.finishedAt), desc(sessions.id)],
       with: {
         loggedExercises: {
@@ -141,12 +141,16 @@ export const sessionRouter = router({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.sessions.findFirst({
-        where: and(eq(sessions.id, input.id), eq(sessions.userId, ctx.userId)),
+        where: and(
+          eq(sessions.id, input.id),
+          eq(sessions.userId, ctx.userId),
+          isNull(sessions.deletedAt),
+        ),
       });
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
       }
-      await db.delete(sessions).where(eq(sessions.id, input.id));
+      await db.update(sessions).set({ deletedAt: new Date() }).where(eq(sessions.id, input.id));
       return { success: true };
     }),
 });

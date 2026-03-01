@@ -28,7 +28,7 @@ export async function createWorkoutTables() {
 export async function createSessionTables() {
   await createWorkoutTables();
   await env.DB.exec(
-    "CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workout_id TEXT NOT NULL REFERENCES workouts(id), workout_title TEXT NOT NULL, started_at INTEGER NOT NULL, finished_at INTEGER NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, deleted_at INTEGER);",
+    "CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, workout_id TEXT REFERENCES workouts(id), workout_title TEXT NOT NULL, started_at INTEGER NOT NULL, finished_at INTEGER NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, deleted_at INTEGER);",
   );
   await env.DB.exec("CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);");
   await env.DB.exec("CREATE INDEX IF NOT EXISTS sessions_workout_id_idx ON sessions(workout_id);");

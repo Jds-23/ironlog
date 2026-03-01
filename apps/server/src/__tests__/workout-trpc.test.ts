@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
 import app from "../index";
 import { createWorkoutTables } from "./helpers/setup-db";
@@ -155,6 +156,79 @@ describe("workout tRPC", () => {
     // User A still sees it
     const { status: statusA } = await trpcQuery("workout.getById", { id });
     expect(statusA).toBe(200);
+  });
+
+  // --- UUID PKs ---
+  it("create returns a text UUID id", async () => {
+    const { json } = await trpcMutation("workout.create", { title: "UUID Test", exercises: [] });
+    const id = json.result.data.id;
+    expect(typeof id).toBe("string");
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  it("getById accepts UUID string id", async () => {
+    const { json: createJson } = await trpcMutation("workout.create", {
+      title: "UUID Get",
+      exercises: [{ name: "Squat", sets: [{ weight: 100, targetReps: 5 }] }],
+    });
+    const id = createJson.result.data.id;
+    expect(id).toMatch(/^[0-9a-f]{8}-/i);
+
+    const { status, json } = await trpcQuery("workout.getById", { id });
+    expect(status).toBe(200);
+    expect(json.result.data.id).toBe(id);
+    expect(json.result.data.title).toBe("UUID Get");
+  });
+
+  // --- soft delete ---
+  it("list excludes soft-deleted workouts", async () => {
+    const { res: resF } = await signUpTestUser({
+      email: "workout-softdel@test.com",
+      password: "password123",
+    });
+    const cookieF = getSessionCookie(resF)!;
+
+    // Create 2 workouts
+    await trpcMutation("workout.create", { title: "Keep", exercises: [] }, cookieF);
+    const { json: c2 } = await trpcMutation(
+      "workout.create",
+      { title: "Delete", exercises: [] },
+      cookieF,
+    );
+    const deleteId = c2.result.data.id;
+
+    // Soft-delete one via raw SQL
+    await env.DB.exec(`UPDATE workouts SET deleted_at = ${Date.now()} WHERE id = '${deleteId}'`);
+
+    // List should return only the non-deleted workout
+    const { json: listJson } = await trpcQuery("workout.list", undefined, cookieF);
+    const titles = listJson.result.data.map((w: { title: string }) => w.title);
+    expect(titles).toContain("Keep");
+    expect(titles).not.toContain("Delete");
+    expect(listJson.result.data).toHaveLength(1);
+  });
+
+  it("delete sets deletedAt instead of hard delete", async () => {
+    const { json: createJson } = await trpcMutation("workout.create", {
+      title: "Soft Delete Me",
+      exercises: [],
+    });
+    const id = createJson.result.data.id;
+
+    // Delete via router
+    const { status } = await trpcMutation("workout.delete", { id });
+    expect(status).toBe(200);
+
+    // getById should return 404
+    const { status: getStatus } = await trpcQuery("workout.getById", { id });
+    expect(getStatus).toBe(404);
+
+    // But row still exists in DB with deletedAt set
+    const row = await env.DB.prepare("SELECT id, deleted_at FROM workouts WHERE id = ?")
+      .bind(id)
+      .first();
+    expect(row).not.toBeNull();
+    expect(row!.deleted_at).not.toBeNull();
   });
 
   // --- list ---
