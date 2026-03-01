@@ -25,6 +25,28 @@ export async function createWorkoutTables() {
   );
 }
 
+export async function createMetricTables() {
+  await createAuthTables();
+  await env.DB.exec(
+    "CREATE TABLE IF NOT EXISTS metric_definitions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, unit TEXT NOT NULL, created_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, updated_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, deleted_at INTEGER);",
+  );
+  await env.DB.exec(
+    "CREATE INDEX IF NOT EXISTS metric_definitions_user_id_idx ON metric_definitions(user_id);",
+  );
+  await env.DB.exec(
+    "CREATE TABLE IF NOT EXISTS metric_entries (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, metric_definition_id TEXT NOT NULL REFERENCES metric_definitions(id) ON DELETE CASCADE, date TEXT NOT NULL, value REAL NOT NULL, created_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, updated_at INTEGER DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL, deleted_at INTEGER);",
+  );
+  await env.DB.exec(
+    "CREATE INDEX IF NOT EXISTS metric_entries_user_id_idx ON metric_entries(user_id);",
+  );
+  await env.DB.exec(
+    "CREATE INDEX IF NOT EXISTS metric_entries_definition_id_idx ON metric_entries(metric_definition_id);",
+  );
+  await env.DB.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS metric_entries_definition_date_idx ON metric_entries(metric_definition_id, date);",
+  );
+}
+
 export async function createSessionTables() {
   await createWorkoutTables();
   await env.DB.exec(
