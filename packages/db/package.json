@@ -8,13 +8,21 @@
     "./schema": {
       "default": "./src/schema/index.ts"
     },
+    "./client": {
+      "default": "./src/client.ts"
+    },
+    "./local-migrations/migrations": {
+      "types": "./src/local-migrations/migrations.d.ts",
+      "default": "./src/local-migrations/migrations.js"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
   },
   "scripts": {
     "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:generate:local": "drizzle-kit generate --config=drizzle.config.expo.ts"
   },
   "dependencies": {
     "@ironlog/env": "workspace:*",
