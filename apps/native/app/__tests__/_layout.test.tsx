@@ -78,6 +78,9 @@ jest.mock("@/contexts/workout-context", () => ({
 jest.mock("@/utils/trpc", () => ({
   queryClient: { clear: jest.fn() },
 }));
+jest.mock("@/lib/local-db-provider", () => ({
+  LocalDbProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 import Layout from "../_layout";
 
