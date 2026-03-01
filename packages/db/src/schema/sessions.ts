@@ -12,9 +12,7 @@ export const sessions = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
-    workoutId: text("workout_id")
-      .notNull()
-      .references(() => workouts.id),
+    workoutId: text("workout_id").references(() => workouts.id),
     workoutTitle: text("workout_title").notNull(),
     startedAt: integer("started_at").notNull(),
     finishedAt: integer("finished_at").notNull(),
