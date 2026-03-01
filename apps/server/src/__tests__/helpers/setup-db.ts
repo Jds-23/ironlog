@@ -71,3 +71,8 @@ export async function createSessionTables() {
   );
   await env.DB.exec("CREATE INDEX IF NOT EXISTS logged_sets_user_id_idx ON logged_sets(user_id);");
 }
+
+export async function createAllSyncTables() {
+  await createSessionTables(); // creates auth + workout + session tables
+  await createMetricTables();
+}

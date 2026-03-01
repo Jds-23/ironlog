@@ -1,6 +1,7 @@
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { metricsRouter } from "./metrics";
 import { sessionRouter } from "./session";
+import { syncRouter } from "./sync";
 import { workoutRouter } from "./workout";
 
 export const appRouter = router({
@@ -15,5 +16,6 @@ export const appRouter = router({
   workout: workoutRouter,
   session: sessionRouter,
   metrics: metricsRouter,
+  sync: syncRouter,
 });
 export type AppRouter = typeof appRouter;
