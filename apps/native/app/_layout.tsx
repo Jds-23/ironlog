@@ -19,6 +19,7 @@ import { AppThemeProvider } from "@/contexts/app-theme-context";
 import { WorkoutProvider } from "@/contexts/workout-context";
 import { authClient } from "@/lib/auth-client";
 import { LocalDbProvider } from "@/lib/local-db-provider";
+import { SyncProvider } from "@/lib/sync-provider";
 import { queryClient } from "@/utils/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -80,19 +81,21 @@ export default function Layout() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocalDbProvider>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <AppThemeProvider>
-                <WorkoutProvider>
-                  <HeroUINativeProvider>
-                    <StackLayout />
-                  </HeroUINativeProvider>
-                </WorkoutProvider>
-              </AppThemeProvider>
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
+        <SyncProvider>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <AppThemeProvider>
+                  <WorkoutProvider>
+                    <HeroUINativeProvider>
+                      <StackLayout />
+                    </HeroUINativeProvider>
+                  </WorkoutProvider>
+                </AppThemeProvider>
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </SyncProvider>
       </LocalDbProvider>
     </QueryClientProvider>
   );
