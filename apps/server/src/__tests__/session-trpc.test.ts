@@ -4,7 +4,7 @@ import { createSessionTables } from "./helpers/setup-db";
 import { createAuthTables, signUpTestUser, getSessionCookie } from "./helpers/setup-auth";
 
 let cookie: string;
-let workoutId: number;
+let workoutId: string;
 
 beforeAll(async () => {
   await createAuthTables();
@@ -64,7 +64,7 @@ function makeSession(overrides?: Record<string, unknown>) {
     durationSeconds: 3600,
     exercises: [
       {
-        exerciseId: 1,
+        exerciseId: "ex-1",
         name: "Bench Press",
         sets: [
           { weight: 100, targetReps: 10, actualReps: 10, done: true },
@@ -73,7 +73,7 @@ function makeSession(overrides?: Record<string, unknown>) {
         ],
       },
       {
-        exerciseId: 2,
+        exerciseId: "ex-2",
         name: "Overhead Press",
         sets: [{ weight: 60, targetReps: 10, actualReps: 10, done: true }],
       },
@@ -206,7 +206,7 @@ describe("session tRPC", () => {
         workoutTitle: "Get Test",
         exercises: [
           {
-            exerciseId: 1,
+            exerciseId: "ex-1",
             name: "Squat",
             sets: [{ weight: 225, targetReps: 5, actualReps: 5, done: true }],
           },
@@ -225,7 +225,7 @@ describe("session tRPC", () => {
   });
 
   it("getById with non-existent id returns 404", async () => {
-    const { status } = await trpcQuery("session.getById", { id: 99999 });
+    const { status } = await trpcQuery("session.getById", { id: "non-existent-id" });
     expect(status).toBe(404);
   });
 
@@ -248,7 +248,7 @@ describe("session tRPC", () => {
         durationSeconds: 99999,
         exercises: [
           {
-            exerciseId: 1,
+            exerciseId: "ex-1",
             name: "Curl",
             sets: [{ weight: 30, targetReps: 12, actualReps: 12, done: true }],
           },
@@ -279,7 +279,7 @@ describe("session tRPC", () => {
         durationSeconds: 60,
         exercises: [
           {
-            exerciseId: 1,
+            exerciseId: "ex-1",
             name: "Deadlift",
             sets: [{ weight: 315, targetReps: 3, actualReps: 3, done: true }],
           },
@@ -296,7 +296,7 @@ describe("session tRPC", () => {
   });
 
   it("delete non-existent id returns 404", async () => {
-    const { status } = await trpcMutation("session.delete", { id: 99999 });
+    const { status } = await trpcMutation("session.delete", { id: "non-existent-id" });
     expect(status).toBe(404);
   });
 
@@ -309,7 +309,7 @@ describe("session tRPC", () => {
         durationSeconds: 60,
         exercises: [
           {
-            exerciseId: 1,
+            exerciseId: "ex-1",
             name: "Bench",
             sets: [{ weight: 100, targetReps: 10, actualReps: 10, done: true }],
           },
@@ -333,7 +333,7 @@ describe("session tRPC", () => {
         durationSeconds: 999999,
         exercises: [
           {
-            exerciseId: 1,
+            exerciseId: "ex-1",
             name: "First",
             sets: [
               { weight: 100, targetReps: 10, actualReps: 10, done: true },
@@ -341,7 +341,7 @@ describe("session tRPC", () => {
             ],
           },
           {
-            exerciseId: 2,
+            exerciseId: "ex-2",
             name: "Second",
             sets: [{ weight: 50, targetReps: 15, actualReps: 15, done: true }],
           },

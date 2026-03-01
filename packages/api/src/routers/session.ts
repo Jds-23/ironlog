@@ -14,13 +14,13 @@ export const loggedSetInput = z.object({
 });
 
 export const loggedExerciseInput = z.object({
-  exerciseId: z.number(),
+  exerciseId: z.string(),
   name: z.string().min(1),
   sets: z.array(loggedSetInput),
 });
 
 export const createSessionInput = z.object({
-  workoutId: z.number(),
+  workoutId: z.string(),
   workoutTitle: z.string().trim().min(1),
   startedAt: z.number(),
   finishedAt: z.number(),
@@ -48,7 +48,7 @@ export function computeSessionStats(
   return { totalSetsDone, totalVolume };
 }
 
-async function fetchSessionWithChildren(id: number, userId: string) {
+async function fetchSessionWithChildren(id: string, userId: string) {
   return db.query.sessions.findFirst({
     where: and(eq(sessions.id, id), eq(sessions.userId, userId)),
     with: {
@@ -65,19 +65,21 @@ async function fetchSessionWithChildren(id: number, userId: string) {
 }
 
 async function insertLoggedExercisesAndSets(
-  sessionId: number,
+  sessionId: string,
+  userId: string,
   exerciseInputs: z.infer<typeof createSessionInput>["exercises"],
 ) {
   for (let i = 0; i < exerciseInputs.length; i++) {
     const ex = exerciseInputs[i]!;
     const [inserted] = await db
       .insert(loggedExercises)
-      .values({ sessionId, exerciseId: ex.exerciseId, name: ex.name, order: i })
+      .values({ sessionId, userId, exerciseId: ex.exerciseId, name: ex.name, order: i })
       .returning();
     for (let j = 0; j < ex.sets.length; j++) {
       const s = ex.sets[j]!;
       await db.insert(loggedSets).values({
         loggedExerciseId: inserted!.id,
+        userId,
         weight: s.weight ?? null,
         targetReps: s.targetReps ?? null,
         actualReps: s.actualReps ?? null,
@@ -110,7 +112,7 @@ export const sessionRouter = router({
     }));
   }),
 
-  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ input, ctx }) => {
     const session = await fetchSessionWithChildren(input.id, ctx.userId);
     if (!session) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
@@ -130,13 +132,13 @@ export const sessionRouter = router({
         durationSeconds: input.durationSeconds,
       })
       .returning();
-    await insertLoggedExercisesAndSets(inserted!.id, input.exercises);
+    await insertLoggedExercisesAndSets(inserted!.id, ctx.userId, input.exercises);
     const session = await fetchSessionWithChildren(inserted!.id, ctx.userId);
     return { ...session!, ...computeSessionStats(session!.loggedExercises) };
   }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.sessions.findFirst({
         where: and(eq(sessions.id, input.id), eq(sessions.userId, ctx.userId)),

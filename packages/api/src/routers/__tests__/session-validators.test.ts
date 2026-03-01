@@ -36,7 +36,7 @@ describe("loggedSetInput", () => {
 describe("loggedExerciseInput", () => {
   it("accepts valid exercise", () => {
     const result = loggedExerciseInput.safeParse({
-      exerciseId: 1,
+      exerciseId: "ex-1",
       name: "Bench Press",
       sets: [{ weight: 135, targetReps: 8, actualReps: 8, done: true }],
     });
@@ -45,7 +45,7 @@ describe("loggedExerciseInput", () => {
 
   it("rejects empty name", () => {
     const result = loggedExerciseInput.safeParse({
-      exerciseId: 1,
+      exerciseId: "ex-1",
       name: "",
       sets: [],
     });
@@ -56,14 +56,14 @@ describe("loggedExerciseInput", () => {
 describe("createSessionInput", () => {
   it("accepts full valid payload", () => {
     const result = createSessionInput.safeParse({
-      workoutId: 1,
+      workoutId: "workout-1",
       workoutTitle: "Push Day",
       startedAt: 1700000000,
       finishedAt: 1700003600,
       durationSeconds: 3600,
       exercises: [
         {
-          exerciseId: 1,
+          exerciseId: "ex-1",
           name: "Bench Press",
           sets: [{ weight: 135, targetReps: 8, actualReps: 8, done: true }],
         },
@@ -74,7 +74,7 @@ describe("createSessionInput", () => {
 
   it("rejects blank workoutTitle", () => {
     const result = createSessionInput.safeParse({
-      workoutId: 1,
+      workoutId: "workout-1",
       workoutTitle: "   ",
       startedAt: 1700000000,
       finishedAt: 1700003600,

@@ -33,7 +33,7 @@ describe("workout schema", () => {
 
     const [inserted] = await db
       .insert(exercises)
-      .values({ workoutId: w!.id, name: "Barbell Row", order: 1 })
+      .values({ workoutId: w!.id, userId, name: "Barbell Row", order: 1 })
       .returning();
 
     const [row] = await db.select().from(exercises).where(eq(exercises.id, inserted!.id));
@@ -47,12 +47,12 @@ describe("workout schema", () => {
     const [w] = await db.insert(workouts).values({ title: "Leg Day", userId }).returning();
     const [e] = await db
       .insert(exercises)
-      .values({ workoutId: w!.id, name: "Squat", order: 1 })
+      .values({ workoutId: w!.id, userId, name: "Squat", order: 1 })
       .returning();
 
     const [inserted] = await db
       .insert(setTemplates)
-      .values({ exerciseId: e!.id, weight: 135.5, targetReps: 8, order: 1 })
+      .values({ exerciseId: e!.id, userId, weight: 135.5, targetReps: 8, order: 1 })
       .returning();
 
     const [row] = await db.select().from(setTemplates).where(eq(setTemplates.id, inserted!.id));
@@ -67,11 +67,11 @@ describe("workout schema", () => {
     const [w] = await db.insert(workouts).values({ title: "Temp Workout", userId }).returning();
     const [e] = await db
       .insert(exercises)
-      .values({ workoutId: w!.id, name: "Bench", order: 1 })
+      .values({ workoutId: w!.id, userId, name: "Bench", order: 1 })
       .returning();
     await db
       .insert(setTemplates)
-      .values({ exerciseId: e!.id, weight: 100, targetReps: 10, order: 1 });
+      .values({ exerciseId: e!.id, userId, weight: 100, targetReps: 10, order: 1 });
 
     await db.delete(workouts).where(eq(workouts.id, w!.id));
 
@@ -92,11 +92,11 @@ describe("workout schema", () => {
     const [w] = await db.insert(workouts).values({ title: "Another Workout", userId }).returning();
     const [e] = await db
       .insert(exercises)
-      .values({ workoutId: w!.id, name: "Deadlift", order: 1 })
+      .values({ workoutId: w!.id, userId, name: "Deadlift", order: 1 })
       .returning();
     await db
       .insert(setTemplates)
-      .values({ exerciseId: e!.id, weight: 225, targetReps: 5, order: 1 });
+      .values({ exerciseId: e!.id, userId, weight: 225, targetReps: 5, order: 1 });
 
     await db.delete(exercises).where(eq(exercises.id, e!.id));
 
@@ -112,12 +112,12 @@ describe("workout schema", () => {
     const [w] = await db.insert(workouts).values({ title: "Bodyweight", userId }).returning();
     const [e] = await db
       .insert(exercises)
-      .values({ workoutId: w!.id, name: "Pull-ups", order: 1 })
+      .values({ workoutId: w!.id, userId, name: "Pull-ups", order: 1 })
       .returning();
 
     const [inserted] = await db
       .insert(setTemplates)
-      .values({ exerciseId: e!.id, order: 1 })
+      .values({ exerciseId: e!.id, userId, order: 1 })
       .returning();
 
     const [row] = await db.select().from(setTemplates).where(eq(setTemplates.id, inserted!.id));
