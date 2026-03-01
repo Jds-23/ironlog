@@ -237,11 +237,13 @@ describe("workout tRPC", () => {
     await trpcMutation("workout.create", { title: "Third", exercises: [] });
 
     const { json } = await trpcQuery("workout.list");
-    const data = json.result.data as { id: number; title: string }[];
+    const data = json.result.data as { id: string; title: string; createdAt: string }[];
     expect(data.length).toBeGreaterThanOrEqual(3);
-    // IDs should be in descending order (most recent first)
+    // createdAt should be in descending order (most recent first)
     for (let i = 1; i < data.length; i++) {
-      expect(data[i - 1]!.id).toBeGreaterThan(data[i]!.id);
+      expect(new Date(data[i - 1]!.createdAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(data[i]!.createdAt).getTime(),
+      );
     }
   });
 
@@ -262,7 +264,7 @@ describe("workout tRPC", () => {
   });
 
   it("getById with non-existent id returns 404", async () => {
-    const { status } = await trpcQuery("workout.getById", { id: 99999 });
+    const { status } = await trpcQuery("workout.getById", { id: "non-existent-id" });
     expect(status).toBe(404);
   });
 
@@ -283,7 +285,7 @@ describe("workout tRPC", () => {
   });
 
   it("delete non-existent id returns 404", async () => {
-    const { status } = await trpcMutation("workout.delete", { id: 99999 });
+    const { status } = await trpcMutation("workout.delete", { id: "non-existent-id" });
     expect(status).toBe(404);
   });
 
@@ -314,7 +316,7 @@ describe("workout tRPC", () => {
 
   it("update non-existent id returns 404", async () => {
     const { status } = await trpcMutation("workout.update", {
-      id: 99999,
+      id: "non-existent-id",
       title: "Nope",
       exercises: [],
     });

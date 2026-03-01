@@ -21,7 +21,7 @@ export const createUpdateInput = z.object({
   exercises: z.array(exerciseInput),
 });
 
-async function fetchWorkoutWithChildren(id: number, userId: string) {
+async function fetchWorkoutWithChildren(id: string, userId: string) {
   return db.query.workouts.findFirst({
     where: and(eq(workouts.id, id), eq(workouts.userId, userId)),
     with: {
@@ -38,19 +38,21 @@ async function fetchWorkoutWithChildren(id: number, userId: string) {
 }
 
 async function insertExercisesAndSets(
-  workoutId: number,
+  workoutId: string,
+  userId: string,
   exerciseInputs: z.infer<typeof createUpdateInput>["exercises"],
 ) {
   for (let i = 0; i < exerciseInputs.length; i++) {
     const ex = exerciseInputs[i]!;
     const [inserted] = await db
       .insert(exercises)
-      .values({ workoutId, name: ex.name, order: i })
+      .values({ workoutId, userId, name: ex.name, order: i })
       .returning();
     for (let j = 0; j < ex.sets.length; j++) {
       const s = ex.sets[j]!;
       await db.insert(setTemplates).values({
         exerciseId: inserted!.id,
+        userId,
         weight: s.weight ?? null,
         targetReps: s.targetReps ?? null,
         order: j,
@@ -77,7 +79,7 @@ export const workoutRouter = router({
     });
   }),
 
-  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
+  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ input, ctx }) => {
     const workout = await fetchWorkoutWithChildren(input.id, ctx.userId);
     if (!workout) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Workout not found" });
@@ -90,12 +92,12 @@ export const workoutRouter = router({
       .insert(workouts)
       .values({ title: input.title, userId: ctx.userId })
       .returning();
-    await insertExercisesAndSets(inserted!.id, input.exercises);
+    await insertExercisesAndSets(inserted!.id, ctx.userId, input.exercises);
     return fetchWorkoutWithChildren(inserted!.id, ctx.userId);
   }),
 
   update: protectedProcedure
-    .input(createUpdateInput.extend({ id: z.number() }))
+    .input(createUpdateInput.extend({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.workouts.findFirst({
         where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),
@@ -106,12 +108,12 @@ export const workoutRouter = router({
       await db.update(workouts).set({ title: input.title }).where(eq(workouts.id, input.id));
       // Delete old exercises (cascade deletes sets)
       await db.delete(exercises).where(eq(exercises.workoutId, input.id));
-      await insertExercisesAndSets(input.id, input.exercises);
+      await insertExercisesAndSets(input.id, ctx.userId, input.exercises);
       return fetchWorkoutWithChildren(input.id, ctx.userId);
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const existing = await db.query.workouts.findFirst({
         where: and(eq(workouts.id, input.id), eq(workouts.userId, ctx.userId)),

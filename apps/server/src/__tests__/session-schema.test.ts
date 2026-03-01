@@ -18,7 +18,7 @@ beforeAll(async () => {
   userId = json.user.id;
 });
 
-function sessionValues(workoutId: number) {
+function sessionValues(workoutId: string) {
   return {
     userId,
     workoutId,
@@ -59,7 +59,7 @@ describe("session schema", () => {
 
     const [inserted] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 42, name: "Barbell Row", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-42", userId, name: "Barbell Row", order: 1 })
       .returning();
 
     const [row] = await db
@@ -68,7 +68,7 @@ describe("session schema", () => {
       .where(eq(loggedExercises.id, inserted!.id));
 
     expect(row!.sessionId).toBe(s!.id);
-    expect(row!.exerciseId).toBe(42);
+    expect(row!.exerciseId).toBe("ex-42");
     expect(row!.name).toBe("Barbell Row");
     expect(row!.order).toBe(1);
   });
@@ -81,13 +81,14 @@ describe("session schema", () => {
       .returning();
     const [le] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 1, name: "Squat", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-1", userId, name: "Squat", order: 1 })
       .returning();
 
     const [inserted] = await db
       .insert(loggedSets)
       .values({
         loggedExerciseId: le!.id,
+        userId,
         weight: 135.5,
         targetReps: 8,
         actualReps: 10,
@@ -114,12 +115,12 @@ describe("session schema", () => {
       .returning();
     const [le] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 1, name: "Bench", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-1", userId, name: "Bench", order: 1 })
       .returning();
 
     const [inserted] = await db
       .insert(loggedSets)
-      .values({ loggedExerciseId: le!.id, order: 1 })
+      .values({ loggedExerciseId: le!.id, userId, order: 1 })
       .returning();
 
     const [row] = await db.select().from(loggedSets).where(eq(loggedSets.id, inserted!.id));
@@ -135,12 +136,12 @@ describe("session schema", () => {
       .returning();
     const [le] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 1, name: "Pull-ups", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-1", userId, name: "Pull-ups", order: 1 })
       .returning();
 
     const [inserted] = await db
       .insert(loggedSets)
-      .values({ loggedExerciseId: le!.id, order: 1 })
+      .values({ loggedExerciseId: le!.id, userId, order: 1 })
       .returning();
 
     const [row] = await db.select().from(loggedSets).where(eq(loggedSets.id, inserted!.id));
@@ -158,10 +159,11 @@ describe("session schema", () => {
       .returning();
     const [le] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 1, name: "Bench", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-1", userId, name: "Bench", order: 1 })
       .returning();
     await db.insert(loggedSets).values({
       loggedExerciseId: le!.id,
+      userId,
       weight: 100,
       targetReps: 10,
       actualReps: 10,
@@ -192,10 +194,11 @@ describe("session schema", () => {
       .returning();
     const [le] = await db
       .insert(loggedExercises)
-      .values({ sessionId: s!.id, exerciseId: 1, name: "Deadlift", order: 1 })
+      .values({ sessionId: s!.id, exerciseId: "ex-1", userId, name: "Deadlift", order: 1 })
       .returning();
     await db.insert(loggedSets).values({
       loggedExerciseId: le!.id,
+      userId,
       weight: 225,
       targetReps: 5,
       actualReps: 5,

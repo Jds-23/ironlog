@@ -5,7 +5,9 @@ import { user } from "./auth";
 export const workouts = sqliteTable(
   "workouts",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
@@ -13,6 +15,10 @@ export const workouts = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsec') * 1000 as integer))`)
       .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsec') * 1000 as integer))`)
+      .notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
   (table) => [index("workouts_user_id_idx").on(table.userId)],
 );
@@ -20,28 +26,52 @@ export const workouts = sqliteTable(
 export const exercises = sqliteTable(
   "exercises",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    workoutId: integer("workout_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    workoutId: text("workout_id")
       .notNull()
       .references(() => workouts.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     order: integer("order").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsec') * 1000 as integer))`)
+      .notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
-  (table) => [index("exercises_workout_id_idx").on(table.workoutId)],
+  (table) => [
+    index("exercises_workout_id_idx").on(table.workoutId),
+    index("exercises_user_id_idx").on(table.userId),
+  ],
 );
 
 export const setTemplates = sqliteTable(
   "set_templates",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    exerciseId: integer("exercise_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    exerciseId: text("exercise_id")
       .notNull()
       .references(() => exercises.id, { onDelete: "cascade" }),
     weight: real("weight"),
     targetReps: integer("target_reps"),
     order: integer("order").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsec') * 1000 as integer))`)
+      .notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
   },
-  (table) => [index("set_templates_exercise_id_idx").on(table.exerciseId)],
+  (table) => [
+    index("set_templates_exercise_id_idx").on(table.exerciseId),
+    index("set_templates_user_id_idx").on(table.userId),
+  ],
 );
 
 export const workoutRelations = relations(workouts, ({ many }) => ({
